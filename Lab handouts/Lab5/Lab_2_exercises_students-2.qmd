@@ -1,0 +1,358 @@
+#### 0) Clear your environment
+
+```{r include=FALSE}
+
+rm(list=ls()) 
+
+```
+
+#### 1) Using the `require()` or `library()` function, load the packages `ggplot2`[@ggplot2], `dplyr`[@dplyr], and `ratdat`[@ratdat] which contains the dataset `complete`.
+
+```{r include=FALSE}
+
+
+```
+
+::: callout-caution
+## Warning: there is no package called 'ratdat'
+
+If you receive this warning, run `install.packages("ratdat")` before you run the line `require("ratdat")`
+:::
+
+#### 2) Inspect the dataset `complete` from the package `ratdat` using `head()`, `summary()`, and `View()`
+
+```{r}
+
+
+```
+
+```{r}
+library(ratdat)
+
+complete
+df <- complete
+```
+
+```{r}
+m
+
+```
+
+\
+
+#### 3a) Based on this inspection, describe the dataset:
+
+```         
+```
+
+Here is how we can remove the `NA` values from the hindfoot length column using `dplyr` to make this assignment simpler:
+
+```{r}
+
+# Clean data by removing NAs from dataset
+complete <- complete %>%
+  filter(!is.na(hindfoot_length))
+
+```
+
+#### 3b) Refer to the in-class lab and do not be afraid to play with the code. Why did we use `filter()` to accomplish this? Why did we not use `select()`?
+
+```         
+```
+
+#### 4) Using `dplyr`, create a new dataframe named `df` consisting of only the columns `genus`, `species`, and `hindfoot_length` from the `complete` dataframe from the package `ratdat`. *Hint: how do we select certain columns using `dplyr`?*
+
+```{r}
+
+
+```
+
+#### 5) Create a new column named "genus_species" that combines genus and species names into a single cell with an underscore as a separator using the `paste()` function (i.e. if *Homo* is in the genus column, and *sapiens* is in the species column, the new "genus_species" column would have *Homo_sapiens*). Refer to the `paste()` help file if needed. *Hint: how do we create new columns using `dplyr`?*
+
+```{r}
+
+
+```
+
+Before contiuning with our data, first let's learn about the `group_by` function.
+
+::: callout-caution
+## group_by() and ungroup()
+
+`dplyr`[@dplyr]'s `group_by()` function is a powerful and convenient way to separate data into groups and perform operations on each group. However, it is important to remember to **always** use `ungroup()` after you are done with your group operations. This is because `group_by()` will continue to affect your data until you use `ungroup()`. This is even more dangerous because visually you will not see any difference in your data after using `group_by()`.
+
+Here is a dummy dataset for us to play with:
+
+```{r}
+
+# Generating some dummy data
+df_dummy <- data.frame(
+  group = c(1, 2, 3, 4, 5, 6),
+  location = c("A", "A", "B", "B", "C", "C"),
+  number = c(5, 3, 4, 6, 7, 2),
+  distance_traveled = c(1, 1, 5, 6, 3, 2)
+)
+
+```
+
+#### 6a) Inspect and describe the dataset
+
+```{r}
+
+```
+
+```         
+```
+
+Our goal is to find total distance traveled in each location and the total count of individuals across groups
+
+First let's group by location.
+
+```{r}
+
+# Grouping by location
+df_grouped1 <- df_dummy %>%
+  group_by(location)
+
+```
+
+#### 6a) Inspect the grouped dataset and describe any changes you see anywhere throughout the Rstudio interface
+
+```{r}
+
+```
+
+```         
+
+Besides the small "Groups: ..." at the top of the output, the data does not appear any different after grouping here.
+```
+
+You are beginning to see why using `group_by()` without `ungroup()` can be dangerous.
+
+Now try to meet the goal of finding the distance traveled in each location by creating the column "group_distance" and using the `sum()` function
+
+```{r}
+
+
+```
+
+#### 6b) Inspect and describe the changes. Is that what we were aiming for? Why or why did it not work?
+
+```{r}
+
+```
+
+```         
+```
+
+#### 6c) Now try to meet the goal of finding the total number of individuals across groups by adding the column "sum".
+
+```{r}
+
+```
+
+#### 6d) Inspect and describe the changes. Is that what we were aiming for? Why or why did it not work?
+
+```{r}
+
+```
+
+```         
+```
+
+We have 3 sum values instead of the desired overall sum!
+
+This is because we did not `ungroup()` like we *always* should. So even thought there is no visual difference after using `group_by()`, not using `ungroup()` affects your code downstream.
+
+Now try repeating the above process in one pipe (creating new dataframe `df_grouped2` by grouping `df_dummy` by location, creating the group_distance column, ungrouping by calling the function `ungroup()` with no arguments, then creating the sum column).
+
+```{r}
+
+
+```
+:::
+
+Now that you have learned about `group_by()` and the importance of `ungroup()`, how *every time* we use `group_by()` we need to *always* remember to `ungroup()`, let's return to our `df` dataset.
+
+#### 7) In our dataframe `df`, create a new column called "mean_hindfoot" that takes the average hindfoot length grouped by species ("genus_species")
+
+```{r}
+
+
+```
+
+#### 8) Similarly, calculate the standard deviation of hindfoot lengths by species in the new column `sd_hindfoot`.
+
+```{r}
+
+```
+
+Let's take the species *Dipodomys merriami* (Rodentia: Heteromyidae) because it has the highest n in our current data frame.
+
+#### 9) Using `ggplot2` in a single pipe, plot a histogram of *D. merriami* hindfoot lengths with labels.
+
+```{r}
+
+library(ratdat)
+
+df <- complete %>%
+  mutate(genus_species = paste(genus, species, sep = "_"))
+
+df %>%
+  filter(genus_species == "Dipodomys_merriami")
+
+
+
+```
+
+# Probability Distributions and Randomization
+
+Base R has a variety of probability distributions available. Many of them are available in four functions for each distribution by default: random, density, probability, and quantile.
+
+For example, for the normal distribution, the `rnorm()`, `dnorm()`, `pnorm()`, and `qnorm()` functions are available following the `?Normal` help file
+
+\
+![](images/image-801535382.png){width="500"}
+
+::: callout-caution
+## Normal Distribution Defaults
+
+Note that by default in R, normal distribution means are set to 0 and standard deviations are set to 1. These values can be changed to fit your needs.
+:::
+
+## `rnorm()`
+
+Let's draw 300,000 random numbers from a normal distribution.
+
+```{r}
+
+# Randomly draw a number from a normal distribution 300,000 times
+normal_distribution <- rnorm(300000)
+
+normal_distribution_df <- data.frame(value = normal_distribution) # Convert vector to dataframe
+normal_distribution_df$index <- seq_along(normal_distribution_df$value) # Add a numbered column
+
+# Calculate mean and standard deviation
+mean <- mean(normal_distribution_df$value)
+sd <- sd(normal_distribution_df$value)
+
+
+```
+
+#### 10) Inspect the data using `summary()` and describe it
+
+```{r}
+
+```
+
+```         
+```
+
+#### 11) Now plot the dataset using a `geom_point()` scatter plot
+
+```{r}
+
+
+```
+
+#### 12) What are your initial impressions of the shape and distribution of this dataset?
+
+```         
+```
+
+Plot this distribution as a histogram
+
+::: callout-tip
+***Hint**:* You will need to include this line in your `ggplot` pipe:\*
+
+`geom_histogram(bins = 1000) + # This is the number of rectangular bars in our histogram`
+:::
+
+```{r}
+
+
+```
+
+#### 13) What are your impressions of the shape and distribution of this dataset now that it is presented as a histogram? If your impression has changed, how is that possible?
+
+```         
+```
+
+## `dnorm()`
+
+What is the probability that a value randomly drawn from this dataset is equal to 2? We can estimate this with the `dorm()` function:
+
+```{r}
+
+dnorm(2, mean = mean, sd = sd)
+
+```
+
+</details>
+
+#### 13b) Gut check: look at the plot, does this number make sense? Why or why not?
+
+```         
+```
+
+Now let's return to our `df` dataset
+
+### 14) Look back at the histogram you produced earlier for *D. merriami* hindfoot length, **visually** what do you think would be a decent estimate of the mean? What about the mode?
+
+*Hint: you can use what we just learned about bin sizes to "zoom" into the data*
+
+```         
+```
+
+#### 15a) Calculate the probability that a value randomly drawn from our *D. merriami* hindfoot length is equal to your visual estimate of the **mean**.
+
+::: callout-tip
+## *Tip: Don't forget to include the mean and standard deviation calculated earlier in `dnorm()`.*
+:::
+
+```{r}
+
+# Extract mean and sd for hindfoot length
+mean_hindfoot <- df %>%
+  filter(genus_species == "Dipodomys_merriami") %>%
+  summarize(mean_hindfoot = mean(mean_hindfoot)) %>% # Reduce to a single value
+  pull(mean_hindfoot) # Extract as a vector
+
+sd_hindfoot <- df %>%
+  filter(genus_species == "Dipodomys_merriami") %>%
+  summarize(sd_hindfoot = mean(sd_hindfoot)) %>% # Reduce to a single value
+  pull(sd_hindfoot) # Extract as a vector
+
+```
+
+```{r}
+
+```
+
+#### 15b) From these results do your visual estimates seem accurate? Why or why not do you think that is?
+
+```         
+```
+
+#### 16a) Calculate the probability that a value randomly drawn from our *D. merriami* hindfoot length is equal to your visual estimate of the **mode**.
+
+```{r}
+
+```
+
+#### 16b) From these results do your visual estimates seem accurate? Why or why not do you think that is?
+
+```         
+```
+
+#### 17) Opinion: what was the most useful and least useful aspect of this lab assignment? Why is that the case for you?
+
+```         
+```
+
+# References
+
+#### 18) What outside sources did you use to help you complete this work (including books, forums, LLMs, etc.)? Describe how they were used:
+
+```         
+```

@@ -1,0 +1,245 @@
+# Working with real predator/prey data
+
+## Exercise 0: Set-up environment and load in data `Blasius_et_al_2019.csv`[@blasius2020] using the package `readr`
+
+```{r setup, include=FALSE}
+
+
+
+```
+
+# Introduction
+
+In this lab, you will further explore predator/prey dynamics utilizing real-world data.
+
+## Exercise 1: Explore your dataset and describe what you see. *Hint: for the raw data, you need to put backticks (\`) around column names if they contain spaces.*
+
+```{r}
+
+# Use functions like head(), summary(), dim(), names(), str(), View()
+# These will be useful throughout the semester
+
+
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+# Produce simple plots like histograms and scatter plots.
+
+
+```
+
+```{r}
+
+
+
+```
+
+```{r}
+
+
+
+```
+
+### Q: Describe the dataset and what you see. (*Hint: Think about things like column names and what they mean (e.g. describe the species in the dataset), unique values in key columns, size of dataset, ranges of values for certain columns, aspect of the dataset that you may need to clean, what the distributions of the values look like for given columns, etc.*)
+
+``` plaintext
+```
+
+## Exercise 1: Clean your data using dplyr. *Hint: Were there columns in your data that contained data that was a not a number? For this assignment you can remove entire rows that are problematic. Keep checking your data until all problematic data is removed.*
+
+```{r}
+
+# Clean the data
+
+
+# View the cleaned data
+
+
+```
+
+## Exercise 2: Plot predator population until day 4 using the `ggplot2` functions `geom_line()`, `xlim(start_time, end_time)`and`ylim(0, 50)`
+
+```{r}
+
+# Define the time range
+start_time <- 0
+end_time <- 4
+
+# Plot predator population over time
+
+
+
+```
+
+### Q: What type of response curve do you see? Explain your reasoning.
+
+``` plaintext
+```
+
+### Q: Why might this predator have this type of response curve?
+
+``` plaintext
+```
+
+## Exercise 4: Plot the predator and prey populations over all time in the same chart.
+
+## *Hint: set your x normally. Then try setting `y` inside of the `aes()` of 2 different `geom_line()`*s.
+
+```{r}
+
+
+```
+
+### Q: Are you able to interpret this chart? Why or why not?
+
+``` plaintext
+```
+
+## Exercise 5: Use the following code to plot predator and prey populations over time in the same chart (*Note that there are two Y-axes displayed in the same plot*).
+
+```{r}
+
+library(scales)
+
+
+read_csv("Blasius_et_al_2019.csv") %>%
+  filter(!is.na(`rotifers (animals/ml)`)) %>%
+  filter(!is.na(`algae (10^6 cells/ml)`)) %>%
+  ggplot(aes(x = `time (days)`)) +
+  geom_line(aes(y = `rotifers (animals/ml)`), color = "blue") +
+  geom_line(aes(y = rescale(`algae (10^6 cells/ml)`, to = c(0, max(`rotifers (animals/ml)`)))), color = "green") +
+  scale_y_continuous(
+    name = "Rotifers (animals/ml)",
+    sec.axis = sec_axis(~ ., name = "Algae (10^6 cells/ml)")  # No transformation needed
+  ) +
+  labs(title = "Predator and Prey Populations Over Time", x = "Time (days)") 
+
+
+
+```
+
+### Q: What do you observe?
+
+``` plaintext
+```
+
+### Q: Do you think this system is stable or unstable? Explain.
+
+``` plaintext
+```
+
+# Rosenzweig-MacArthur model
+
+## Exercise 6: Imagine a scenario where the rotifers instead were introduced to a new algae system at day 1 and gradually improve at handling prey over time. Using the Rosenzweig-MacArthur model equations from lab, model this scenario with `Time <- seq(0, 200, by = 0.1)`. *Hint: use `pull()` to extract P0 and N0 from the dataset*
+
+$$
+r = 0.5\\
+a = 0.01\\
+f = 0.1\\
+q = 0.2\\
+h = 0.001\\
+K = 1000\\
+$$
+
+```{r}
+
+# Set the parameters
+
+# Define the function
+
+# Use deSolve
+
+
+# Convert to dataframe
+
+
+# Plot
+
+
+
+```
+
+### Q: Do you think this system is stable or unstable? Explain.
+
+``` plaintext
+```
+
+# Functional Responses
+
+## Exercise 7:
+
+As another way to represent functional response curves, represent the code below as a dataframe using `df <- data.frame(N = seq(0, 50, length.out = 100))` and plot prey density vs. prey killed per predator using the `ggplot()` `stat_function()` function:
+
+$$
+F = \frac{bN^{1+q}}{1+bhN^{1+q}}
+$$
+
+```{r, echo = FALSE}
+
+# Set parameters
+
+
+# Create a data frame for plotting
+
+
+# Plot the function using ggplot2 and stat_function()
+
+
+
+```
+
+### Q: What do you notice as you vary the values of the terms?
+
+``` plaintext
+```
+
+### Q: Which response curves do you observe?
+
+```         
+```
+
+------------------------------------------------------------------------
+
+#### Opinion: what was the most useful and least useful aspect of this lab assignment? Why is that the case for you?
+
+``` plaintext
+```
+
+#### What outside sources did you use to help you complete this work (including books, forums, LLMs, etc.)? Describe how they were used:
+
+``` plaintext
+```
+
+# References

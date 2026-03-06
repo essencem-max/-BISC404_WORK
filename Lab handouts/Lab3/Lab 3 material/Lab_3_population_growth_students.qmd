@@ -1,0 +1,746 @@
+![.](../images/clipboard-3708414891.png){fig-align="center"}
+
+[@population-growth-over-time]
+
+# Models
+
+```{r setup, include=FALSE}
+
+rm(list = ls())
+
+library(ggplot2)
+library(dplyr)
+
+```
+
+Models are an abstraction of reality. This means that models *exclude* much more information than they *include*. That is a limitation we must keep in mind when drawing conclusions from models, but this is also a very desirable attribute of models.
+
+Imagine you were on a hiking trail and wanted to find the quickest way back to the trailhead. You see a sign-post with a map posted, so you approach it. If that map contained *all* of the information about every aspect of that area, that would be very unhelpful. Instead the map is designed as an abstraction, presenting only the information the users desire to know about the real world.
+
+In general across fields, models are designed to provide at least one of three utilities to their users. The ability to:
+
+1.  Predict
+
+2.  Explain
+
+3.  Generalize
+
+Which of these three utilities is the trail map designed to provide?
+
+# 1) Exponential/Density-Independent Population Growth
+
+As you recall this course focuses heavily on community ecology. In lab, we will build gradually to the community level. Today we will start by analyzing interactions within a population.
+
+What is a population? How many species does it include?
+
+In ecology what is a community?
+
+## 1a) Discrete Exponential Population Growth
+
+We will begin our labwork by exploring **density-independent population growth**. Density-independent population growth occurs when the growth rate of a population size is not affected by the number of conspecifics in that population. Each individual in a population does not affect the fitness of another member of that same population.
+
+Density-independent population growth is relatively simple to model because it can be represented by a simple geometric series and generally involves fewer parameters than other models of population.
+
+However, it is also biologically useful to understand because density-independent population growth can occur in nature.
+
+When in the natural world might you observe density-independent population growth?
+
+### Modeling: The Trouble with Tribbles
+
+Let's model a scenario of density-independent population growth together. In Star Trek the hairy, featureless species called tribbles seem to have an extraordinary population growth rate. They are said to be "born pregnant." It seems as if their population growth might be density-independent, but let us make a model to see if we think that is true.\
+
+![*Star Trek: The Original Series episode, "The Trouble with Tribbles", Fair use, [Wikimedia](https://en.wikipedia.org/w/index.php?curid=40155418)*](../images/image-1390702806.png){fig-align="center"}
+
+We decide on a transect and monitor the tribbles on the ship. Between generations we observe the following:
+
+| Day        | Number of individuals |
+|------------|-----------------------|
+| 1967-12-29 | 17                    |
+| 1967-12-30 | 51                    |
+| 1967-12-31 | 153                   |
+| 1968-01-01 | 459                   |
+| 1968-01-02 | 1377                  |
+
+Create vectors from number of tribbles (`n`) per day (`days`):
+
+```{r}
+
+days <-c(1, 2, 3, 4,5)
+n <- c(17, 51, 153,459,1377)
+```
+
+Let's plot the number of tribbles (`n`) per day (`days`) using `ggplot2`[@ggplot2]. Note that in order to use `ggplot2` we must have a dataframe data stucture as our input. Use `geom_step()` and `geom_point()` for the geoms.
+
+```{r}
+
+tribble_df <- data.frame( Days = days, N = n)
+tribble_df
+
+```
+
+```{r}
+ggplot(data = tribble_df, aes(x = Days, y = N)) + geom_step() + geom_point()
+labs(x = "Days", y ="Numbers of Tribbles")
+```
+
+#### Predicting population size
+
+How can we predict how large we expect the population to be tomorrow? We need to calculate following:
+
+$$
+\begin{equation*}\frac{N_{t+1}}{N_{t}}\end{equation*}
+$$
+
+```{r}
+
+ratio = n[2:5] / n[1:4]
+rat
+```
+
+Now we can make a generalization, the population seems to be increasing by how many percent per day?
+
+The engineers have estimated that the "Aeroponics Bay" can only provide enough oxygen to support 111,537 tribbles. We need to predict how many days until this population size is reached if this growth rate continues.
+
+Using `n[5]` calculate how many tribbles you predict there will be on day 6 (`n_day_6`)
+
+```{r}
+ 
+n_day_6 = n[5]*3
+n_day_6
+```
+
+Using `n[5]*3`, calculate how many tribbles you predict there will be on day 7
+
+```{r}
+
+n_day_7 <- (n[5]*3)*3
+n_day_
+```
+
+Do you see a trend? We can generalize this trend in the following way:
+
+$$
+\begin{array}{l}N_{6} \ =\ 3 N_{5}\\N_{7} \ =\ 3\ ( 3 N_{5})\\N_{8} \ =\ 3\ ( 3\ ( 3 N_{5}))\\\\= >\\\\N_{t} \ =\ 3^{t} N_{0}\end{array}
+$$
+
+As a general term, we can introduce $\lambda$ as the **finite rate of increase**. Note that $\lambda$ has no unit.
+
+$$
+N_{t} \ =\ N_{0} \lambda ^{t} 
+$$
+
+:::: callout-note
+## `apply()` Loops
+
+Because R is built around vectors as its most basic unit, R is very well suited for applying functions across rows or columns of a data structure. However, to help with readability the apply family of functions can be used. They are similar to for loops which are also a useful tool.
+
+Create `vector_1` and `vector_2` with values (6,5,3) and (3,2,1) respectively
+
+```{r}
+
+vector_1 <- c(6,5,3)
+
+vector_2 <-c(3,2,1)
+```
+
+Create `matrix_1` by using `cbind()` to combine `vector_1` and `vector_2`
+
+```{r}
+
+matrix_1 <- cbind(vector_2, vector_1)
+matrix_1
+
+```
+
+Write a function to average the values of each numeric column of our matrix_1 \<- cbind(c(6,5,4),c(3,2,1)) without using any loop functions.
+
+```{r}
+
+column_average <- function(x) {
+ colMeans(x)
+}
+column_average(matrix_1)
+  
+```
+
+#### `apply()`
+
+Now let's do the same process with the apply() function instead of our own function, which applies the function to the columns or rows of **only multi-dimensional** data structures, and the mean() function.
+
+Following the help file, here is the structure: apply(X, MARGIN, FUN, …, simplify = TRUE), where MARGIN = 1 is for rows while MARGIN = 2 is for columns and FUN is any function we want to apply.
+
+```{r}
+
+apply(matrix_1, MARGIN = 2, mean)
+
+```
+
+Try using apply() to find the square root of each element in our matrix_1
+
+```{r}
+
+sample(matrix_1, MARGIN = 2, sqrt)
+
+```
+
+Now try using apply() to find the square root of each element in our vector_1 \<- c(6,5,4)
+
+```{r}
+#| error: true 
+
+
+
+```
+
+#### `lapply()`
+
+The lapply() function performs in a similar way, however it can also be used on **1-dimensional** data structures, like lists and vectors, whereas apply() would throw an error in those use cases. **The output is always a list**.
+
+Let's use it to take the square root of each element of vector_1
+
+```{r}
+
+lapply(vector_1, sqrt)
+```
+
+#### `sapply()`
+
+sapply() is similar to lapply() in that it can accept a data structure input of **any dimensions**. However it does not always return a list, it **can return a vector or matrix** if it is possible.
+
+Let's see what happens when we use sapply() on vector_1 instead
+
+```{r}
+
+sapply(vector_1, sqrt)
+
+
+```
+
+Now try the same thing for matrix_1 and compare to the output from apply()
+
+```{r}
+
+sapply(matrix_1, sqrt)
+
+```
+
+#### Other apply Family Functions
+
+Here is a summary of what we have covered so far.
+
+There are other apply family functions like mapply() and tapply(), however we will not cover those at this time.
+
+It's worth mentioning that there are other alternatives to the apply family of functions including map() from the purrr[@purrr] package as well as rowwise(), colwise(), and across() from the dplyr[@dplyr] package.
+
+::: callout-tip
+## `apply()` Family Shorthand Notation
+
+`apply(x, function(y) y)` is referred to as "shorthand notation" or "shorthand syntax." Because we are using a placeholder function without even naming it, it is referred to as an "anonymous function" and we can use shorthand to define what the function does. Meanwhile `x` is the argument and `y` is the parameter.
+:::
+::::
+
+Let's go back to managing our tribble crisis. Recall we found we were able to represent **density-independent population growth** with the following equation:
+
+$$
+N_{t} \ =\ N_{0} \lambda ^{t} 
+$$
+
+Calculate how many more days you predict until the population exceeds 111,537 tribbles. You can use the following `sapply()` shorthand format that you just learned about:
+
+``` r
+Nt.s <- sapply(N0, function(n) n * lambda^t)
+```
+
+```{r}
+N0 <- 1377
+lambda <- 3
+t <- 1:5
+
+Nt.s <- sapply(N0, function(n) n * lambda^t)
+```
+
+In result, how many more days until you predict the ship will run out of oxygen?
+
+The logarithmic scale is useful when analyzing rates. In this example, the logarithmic scale provides a clearer way to visualize this steady trend that may not have been immediately apparent in our earlier plot.
+
+```{r}
+
+tribble_df_discrete <- data.frame(
+  Days = t,
+  N = Nt.s
+)
+
+Nt.s <- sapply(lambda, function(lambda) n * lambda^t)
+# Plot without the logarithmic scale
+ggplot(data = tribble_df, aes(x = Days, y = N)) + geom_step() + geom_point()
+labs(x = "Days", y ="Numbers of Tribbles")
+```
+
+```{r}
+
+# Now plot with a logarithmic scale by adding the line `scale_y_log()` to the end of your ggplot pipe
+
+ggplot(data = tribble_df, aes(x = Days, y = N)) + geom_step() + geom_point()
+labs(x = "Days", y ="Numbers of Tribbles")
+scale_y_log10()
+```
+
+#### Effects of initial population size
+
+From our previous analysis, it looks like the ship is in danger. How much of an effect would it have to cull the current population?
+
+Use the following values to determine how much would the population need to be culled today to extend oxygen reserves another full day:
+
+``` r
+N0.s <- c(N0, 918, 459, 230)
+```
+
+```{r}
+
+NO.s <-1377
+lambda <- 3
+t <- 1:5
+
+Nt.s <- sapply(NO.s, function(n) n * lambda^t)
+
+Nt.s
+```
+
+Initial population size can have a large effect on populations undergoing density-independent growth!
+
+#### Effects of differing per capita growth rates
+
+So far, we have modeled this scenario with a per capita growth rate of 3. What do you think would happen if the per capita growth rate approached 1? What if it went below 1?
+
+Now, let's check your guess by plotting the scenarios where $\lambda$ = `c(0.75, 1, 1.5)` for `N0` over the next 5 days.
+
+```{r}
+
+lambdas <- c(0.75, 1, 1.5)
+NO <- 1377
+t <- 1:5
+# use sapply() to calculate Nt.s
+Nt.s <- sapply(lambdas, function(lambda) n * lambda^t)
+
+# We need to convert to a dataframe to work with `ggplot2`
+
+Nt.df <- data.frame( 
+  Days = rep(t, times = length(lambdas)),
+  N = as.vector(Nt.s),
+  Lambda = rep(lambdas, each = length(t))
+)
+
+
+ggplot(Nt.df, aes(x = Days, y = N, group = Lambda, color = factor(Lambda))) +
+  # plot the results using geom_step() and geom_point()
+  geom_step() +
+geom_point() +
+  geom_hline(yintercept = N0, linetype = "dashed") +
+  # add labels
+  labs(x = "Days", y = "N", color = "lambda")
+
+```
+
+Observe the plot above. How do the different values of $\lambda$ affect the population size
+
+## 1b) Continuous Exponential Population Growth
+
+In nature, discrete logistic population growth is not as common as continuous logistic population growth. An example of discrete logistic population growth is the growth of a population of annual plants, whereas an example of continuous logistic population growth is the growth of a human population where reproduction occurs continuously.
+
+In general as a convention, $\lambda$ is used for discrete population growth and $r$ is used for continuous population growth.
+
++----------------+-----------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                | Exponential/Density Independent                                                         | Logistic/Density Dependent                                                                                                                           |
++================+=========================================================================================+======================================================================================================================================================+
+| **Discrete**   | Population grows by a constant proportion λ at each time step (e.g. year).              | Population grows by a constant proportion each time step, but the growth rate decreases as the population size approaches the carrying capacity K.   |
+|                |                                                                                         |                                                                                                                                                      |
+|                | $$                                                                                      | $$                                                                                                                                                   |
+|                | N \lambda^{t}                                                                           | \lambda N(1-\frac{N_{t}}{K})                                                                                                                         |
+|                | $$                                                                                      | $$                                                                                                                                                   |
++----------------+-----------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Continuous** | Population grows continuously at an instantaneous rate r at each time step (e.g. year). | Population grows continuously (not at discrete time steps), but the growth rate decreases as the population size approaches the carrying capacity K. |
+|                |                                                                                         |                                                                                                                                                      |
+|                | $$                                                                                      | $$                                                                                                                                                   |
+|                | Ne^{rt}                                                                                 | rN(1-\frac{N}{K})                                                                                                                                    |
+|                | $$                                                                                      | $$                                                                                                                                                   |
++----------------+-----------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+\
+Let's start with plotting discrete exponential population growth again in the same way we did above
+
+```{r}
+
+N0 <- 1377
+lambda <- 3
+t <- 1:5
+
+# Create equation for discrete population growth
+
+Nt_discrete <- sapply(N0, function(n) n * lambda^t)
+# Convert to data frame
+df_discrete <- data.frame ( Days = t, population = Nt_discrete)
+# Plot with geom_step() and geom_point()
+
+
+ggplot(df_discrete, aes(x = Days, y = population)) + geom_step() + geom_point() +
+labs(title = "Discrete Population Growth", x = "Days", y = "Population Size")
+```
+
+What happens when we make the spacing between days smaller? Try it with \`t \<- seq(1, 5, by = 0.25)\`\
+
+```{r}
+
+N0 <- 1377
+lambda <- 3
+t <- seq(1, 5, by = 0.01)
+
+# Create equation for discrete population growth
+
+Nt_discrete <- sapply(N0, function(n) n * lambda^t)
+# Convert to data frame
+df_discrete <- data.frame ( Days = t, population = Nt_discrete)
+# Plot with geom_step() and geom_point()
+
+
+ggplot(df_discrete, aes(x = Days, y = population)) + geom_step() + geom_point() +
+labs(title = "Discrete Population Growth", x = "Days", y = "Population Size")
+```
+
+How about even smaller?
+
+```{r}
+
+N0 <- 1377
+lambda <- 3
+t <- seq(1, 5, by = 0.25)
+
+# Create equation for discrete population growth
+
+Nt_discrete <- sapply(N0, function(n) n * lambda^t)
+# Convert to data frame
+df_discrete <- data.frame ( Days = t, population = Nt_discrete)
+# Plot with geom_step() and geom_point()
+
+
+ggplot(df_discrete, aes(x = Days, y = population)) + geom_step() + geom_point() +
+labs(title = "Discrete Population Growth", x = "Days", y = "Population Size")
+
+```
+
+We are approaching a continuous growth pattern.
+
+We can model continuous exponential population growth directly with the formula:\
+
+$$
+Ne^{rt}
+$$
+
+Re-write our code with this equation along with $r=log(\lambda)$ and `geom_line()` instead of `geom_step()`.
+
+```{r}
+
+# Define initial parameters
+N0 <- 1377
+lambda <- 3
+r <- log(lambda)
+t <- seq(1, 5, by = 0.01)
+
+Nt_continuous <- N0 * exp( r * t)
+
+df_discrete <- data.frame ( Days = t, population = Nt_continuous)
+
+ggplot(df_discrete, aes(x = Days, y = population)) + geom_line() + geom_point() +
+labs(title = "Discrete Population Growth", x = "Days", y = "Population Size")
+```
+
+Compare this to the discrete population growth plot above with small intervals between timesteps. What do you notice?
+
+These curves are very similar!
+
+We found earlier that $\lambda = 1$ is the threshold between positive and negative population growth. What is the equivalent threshold for $r$?
+
+```{r}
+
+
+
+```
+
+$$
+\begin{array}{l}
+No\ Change:\ \lambda \ =\ 1\ ,\ r\ =\ 0\\
+Population\ Growth:\ \lambda \  >\ 1\ ,\ r\  >\ 0\\
+Population\ Decline:\ \lambda \ < \ 1\ ,\ r\ < \ 0
+\end{array}
+$$
+
+# 2) Logistic/Density-Dependent Population Growth
+
+## 2a) Continuous Logistic Population Growth
+
+As we collect more data on the tribble population, we find that it does not match our original predictions following density-independent growth calculations. Instead, let's explore if there may be something limiting population growth.
+
+Why might this be?
+
+Recall from lecture, that we can represent density-dependent growth as
+
+$$
+\frac{dN}{dt} \ =\ rN\left( 1\ -\ \frac{N}{K}\right)
+$$
+
+$r$ is defined as $r=ln(\lambda)$
+
+$K$ is the carrying capacity of the population. Do you remember from lecture at which values of $K$ is the population considered stable?
+
+There can be multiple definitions of stability for a population including what?
+
+Today, we will focus on *resilience*, the ability of a population size to return to an equilibrium when a disturbance occurs. We can monitor the strength of this attraction back to equilibrium by measuring the rate of attraction. This point of attraction, or the *attractor*, is the carrying capacity.
+
+There is another equilibrium point at $N = 0$. When the ship was devoid of all tribbles, the population was at a stable size of 0. However, this is considered the *unstable* equilibrium point, or *repeller*, because as soon as this population size was perturbed by the introduction of tribbles, the population size was rapidly repelled away from the unstable equilibrium point and potentially attracted towards the stable equilibrium point of the population carrying capacity.
+
+![](../images/image-333901463.png){width="794"}
+
+What is happening at each of these points (a, b, c, d, and e)?
+
+Now let's add a carrying capacity to our model. We can do this by adding a term to the equation that represents the carrying capacity, $K$ using the following equation:
+
+$$
+rN(1-\frac{N}{K})
+$$
+
+Add a carrying capacity of 90000 at day +4 to our model. Based on the plot above what would you expect to happen at that value?
+
+```{r}
+# Define initial parameters
+N0 <- 1377  
+lambda <- 3  
+r <- log(lambda)  
+K <- 90000  
+t <- 1:10 
+
+# Write logistic function
+Nt_logistic <- sapply(t, function(t) K / (1 + ((K - N0) / N0) * exp(-r * t)))
+
+# Create a data frame for plotting
+
+df_discrete <- data.frame ( Days = t, population = Nt_logistic)
+# Plot with ggplot2
+
+ggplot(df_discrete, aes(x = Days, y = population)) + geom_line() + geom_point() +
+labs(title = "Logistic Population Growth", x = "Days", y = "Population Size")
+```
+
+What is occurring with these results? How has the shape of our curve changed? What does this shape imply?
+
+We will talk about modeling the population growth of multiple species at once to see how interactions between species affect population growth in the following weeks.
+
+R's ordinary differential equation (ODE) solver deSolve() can be used to analyze population growth. ODEs are commonly used to calculate rates of change in order to model dynamic systems and we will use them quite a bit throughout the semester.
+
+As a final example, the figure on the left[@stevens2009primer] is an example of a simple continuous logistical growth of a population converging at $K$. The plot on the right[@stevens2009primer] shows a simulation of populations converging towards $K$ at different rates depending on their traits. Regardless of $N$ or $r$, the population sizes eventually converge at $K$.
+
+```{r}
+#install.packages("deSolve")
+```
+
+```{r}
+
+library(deSolve)
+
+clogistic <- function(times, y, parms) {
+  n <- y[1]
+  r <- parms[1]
+  alpha <- parms[2]
+  dN.dt <- r * n * (1 - alpha * n)
+  return(list(c(dN.dt)))
+}
+
+#We create vectors for the parameters and the initial densities for all of the populations in the model. We also specify the time.
+prms <- c(r = 1, alpha = 0.01)
+init.N <- c(1)
+t.s <- seq(0.1, 10, by = 0.1)
+
+# We load the deSolve library, and run ode. The output is a matrix that includes the time steps and N.
+require(deSolve)
+out <- ode(y = init.N, times = t.s, clogistic, parms = prms)
+plot(out[, 1], out[, 2], type = "l", xlab = "Time", ylab = "N")
+
+outmat <- matrix(NA, nrow = length(t.s), ncol = 20)
+for (j in 1:20) outmat[, j] <- {
+  y <- runif(n = 1, min = 0, max = 120)
+  prms <- c(r = runif(1, 0.01, 2), alpha = 0.01)
+  ode(y, times = t.s, clogistic, prms)[, 2]
+}
+
+
+matplot(t.s, outmat, type = "l", col = 1, ylab = "All Populations")
+
+
+```
+
+------------------------------------------------------------------------
+
+# References
+
+------------------------------------------------------------------------
+
+# Appendix
+
+## Introduction to Simulations
+
+Among other uses, simulations can give us an alternative approach to prediction. We continue to monitor our transects on the ship and store our data in the `tribbles.rds` data file.
+
+::: callout-tip
+## \`.Rds\` and \`.Rda\` files in R
+
+`.rds` and `.rda` (or `.Rdata`) files are used to store data natively in R.
+
+The main advantage of `.rda` files is that they can contain a variety of data in a single file (objects, plots, functions, packages, etc.), however when loading a `.rda` file you run the risk of over-writing existing objects, plots, etc. with the same name.
+
+`.rds` files can only contain a single data structure. A benefit of this file type is that loading a `.rds` file will not overwrite data structures with the same name.
+:::
+
+First load and view the data. We will use the `head()` function to just view the first columns of the data set to get an idea of their contents.
+
+```{r}
+
+tribbles <- readRDS(file = "tribbles.rds")
+
+```
+
+It is always good to visualize our data to better understand it. Plot the data (Days x Count):
+
+```{r}
+
+
+
+```
+
+Now we will calculate the observed change in population counts per day as $R_{t}$. $R_{t}$ is similar to $\lambda$, however $R_{t}$ represents the ratio between two particular time points.
+
+$$
+R_{t} \ =\ \frac{N_{t\ +\ 1}}{N_{0}}
+$$
+
+In our example, this can be calculated by:
+
+```{r}
+# The character "-" means exclude in R subsetting, which is distinct from other languages where "-" means starting from the end
+
+R_t <- tribbles$Count[-1] / tribbles$Count[-length(tribbles$Count)]
+R_t
+```
+
+</details>
+
+Again, let's visualize the results to get an idea of the data. Plot days by $R_{t}$.
+
+```{r}
+
+# Create a new data frame for ggplot excluding the last day
+
+
+# Plot with `geom_hline(yintercept = 1, linetype = "dashed") +  # Add a dashed line at R_t = 1`
+
+```
+
+Why did we include the horizontal line at $R_{t}$ = 1? What does being above, below, and along his line indicate?
+
+In any analyses it is always important to state our assumptions. In this simulation, we will assume that any of the observed values for $R_{t}$ are equally likely to occur. Because of this assumption we can *resample with replacement* from our dataset to simulate predictions of what might happen to population size in the future. This is like putting each value in a hat, randomly drawing a value and recording it, then *replacing* it back in the hand with the possibility of drawing it again. Also note that everything a computer does is technically pseudorandom because the randomness is programmed.
+
+::: callout-tip
+## Bootstrapping
+
+Bootstrapping is the process of resampling *without* replacement, where *n* matches the *n* of your sample.
+:::
+
+We can set the number of draws by the number of days. (Note that in this case we will draw one more value than the number indicated because we have starting day at day 0). Then we can randomly draw using the `sample()` function.
+
+```{r}
+days <- 50
+
+R_t.s.sim<- sample(x = R_t, size = days, replace = TRUE)
+
+R_t.s.sim
+```
+
+Then we can loop through the drawn values to calculate predicted population size.
+
+Note that by default, `apply()` family functions are not applied iteratively, therefore they try to apply the function to the entire object at once. In this instance, we need to include a `<<-` term in assigning outputs, this assigns the output to the parent scope which allows the function to operate iteratively.
+
+In the case of applying functions iteratively, `for` loops are often simpler because they are iterative by default.
+
+```{r}
+# Create empty object of appropriate size
+
+data.sim <- numeric(days + 1)
+data.sim
+```
+
+```{r}
+
+# Start with last value from the real data
+data.sim[1] <- tribbles$Count[tribbles$Days == max(tribbles$Days)]
+
+# Because we want to use previous values iteratively, a `for` loop is the perfect fit
+for (t in 1:days) data.sim[t + 1] <- {
+   data.sim[t] * R_t.s.sim[t]
+}
+
+```
+
+```{r}
+
+# Create a data frame for ggplot
+
+# Plot
+ggplot(simulation_df, aes(x = Days, y = Simulated_Population)) +
+  geom_point() +
+  labs(x = "Days", y = "Simulated Population Size")
+
+
+```
+
+This particular simulation just gives us one simulated possibility. However, there are many equally likely simulated possibilities. A single trajectory is very unlikely on its own because it would require a particular sequence of $R_{t}$ to be drawn. However multiple simulations can give us a better idea of the range of possibilities.
+
+Let's create a matrix of 10 simulations. Therefore, we will have 10 simulations x 50 days.
+
+```{r}
+sims <- 10
+
+M.sim <- matrix(sample(R_t, sims * days, replace = TRUE),
+                nrow = days, ncol = sims)
+
+dim(M.sim)
+```
+
+Now that we have a matrix of randomly drawn $R_{t}$ sequences, just as we did above we can predict population sizes under these differing scenarios.
+
+```{r}
+
+# Start with last value from the real data
+data.sim[1] <- tribbles$Count[tribbles$Days == max(tribbles$Days)]
+
+matrix.sim <- sapply(1:sims, function(i) {
+  for (t in 1:days) data.sim[t + 1] <- data.sim[t] * M.sim[t, i]
+  data.sim
+})
+
+# This can also be accomplished using mapply()
+# matrix.sim <- mapply(function(i, t) {
+#   data.sim[1] <- tribbles$Count[tribbles$Days == max(tribbles$Days)]
+#   for (j in 1:t) data.sim[j + 1] <- data.sim[j] * M.sim[j, i]
+#   data.sim
+# }, 1:sims, days)
+# matrix.sim <- t(matrix(unlist(matrix.sim), ncol = days + 1, byrow = TRUE))
+
+```
+
+```{r}
+
+# create dataframe "simulation_df"
+
+# plot
+
+
+```
+
+This simulation allows us to see different population abundance trajectories, predicting what trajectories may look like given the range of growth rates already observed in this population.
