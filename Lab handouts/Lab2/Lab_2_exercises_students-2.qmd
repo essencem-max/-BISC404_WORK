@@ -1,14 +1,14 @@
 #### 0) Clear your environment
 
-```{r include=FALSE}
-
-rm(list=ls()) 
-
+```{}
 ```
 
 #### 1) Using the `require()` or `library()` function, load the packages `ggplot2`[@ggplot2], `dplyr`[@dplyr], and `ratdat`[@ratdat] which contains the dataset `complete`.
 
 ```{r include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(ratdat)
 
 
 ```
@@ -22,7 +22,9 @@ If you receive this warning, run `install.packages("ratdat")` before you run the
 #### 2) Inspect the dataset `complete` from the package `ratdat` using `head()`, `summary()`, and `View()`
 
 ```{r}
-
+head(complete)
+summary(complete)
+View(complete)
 
 ```
 
@@ -43,6 +45,7 @@ m
 #### 3a) Based on this inspection, describe the dataset:
 
 ```         
+The dataset complete contains biological data about rodents. Each row represents an individual observation and the columns contain information such as genus, species, hindfoot length, and other measurements. Some rows contain missing values (NA).
 ```
 
 Here is how we can remove the `NA` values from the hindfoot length column using `dplyr` to make this assignment simpler:
@@ -58,12 +61,14 @@ complete <- complete %>%
 #### 3b) Refer to the in-class lab and do not be afraid to play with the code. Why did we use `filter()` to accomplish this? Why did we not use `select()`?
 
 ```         
+We used filter() because we wanted to remove rows that contain NA values in the hindfoot_length column. The filter() function removes rows based on conditions. select() would not work because it is used to choose columns, not remove rows.
 ```
 
 #### 4) Using `dplyr`, create a new dataframe named `df` consisting of only the columns `genus`, `species`, and `hindfoot_length` from the `complete` dataframe from the package `ratdat`. *Hint: how do we select certain columns using `dplyr`?*
 
 ```{r}
-
+df <- complete %>%
+  select(genus, species, hindfoot_length)
 
 ```
 
@@ -71,7 +76,8 @@ complete <- complete %>%
 
 ```{r}
 
-
+df <- df %>%
+  mutate(genus_species = paste(genus, species, sep = "_"))
 ```
 
 Before contiuning with our data, first let's learn about the `group_by` function.
@@ -98,10 +104,14 @@ df_dummy <- data.frame(
 #### 6a) Inspect and describe the dataset
 
 ```{r}
+head(df_dummy)
+summary(df_dummy)
+View(df_dummy)
 
 ```
 
 ```         
+The dataset contains six observations with four columns: group, location, number, and distance_traveled. Each row represents a group and the location where it was observed along with the distance traveled.
 ```
 
 Our goal is to find total distance traveled in each location and the total count of individuals across groups
@@ -119,6 +129,7 @@ df_grouped1 <- df_dummy %>%
 #### 6a) Inspect the grouped dataset and describe any changes you see anywhere throughout the Rstudio interface
 
 ```{r}
+df_grouped1
 
 ```
 
@@ -139,15 +150,20 @@ Now try to meet the goal of finding the distance traveled in each location by cr
 #### 6b) Inspect and describe the changes. Is that what we were aiming for? Why or why did it not work?
 
 ```{r}
+df_grouped1 <- df_grouped1 %>%
+  mutate(group_distance = sum(distance_traveled))
 
 ```
 
 ```         
+This did not work as expected because mutate() calculates the sum for each group and repeats that value for every row in that group. We wanted a single total per location instead.
 ```
 
 #### 6c) Now try to meet the goal of finding the total number of individuals across groups by adding the column "sum".
 
 ```{r}
+df_grouped1 <- df_grouped1 %>%
+  mutate(sum = sum(number))
 
 ```
 
@@ -158,6 +174,66 @@ Now try to meet the goal of finding the distance traveled in each location by cr
 ```
 
 ```         
+
+Lab_1_exercises_students-2.qmd
+File
+
+Lab_1_Intro_Git.qmd
+File
+
+Lab_2_exercises_students-2.qmd
+File
+It looks like your Lab 2 exercise is asking you to fill in R code and short explanations. Below are the correct things you can put in each section.
+1️⃣ Load the packages
+Put this in the R chunk:
+library(ggplot2)
+library(dplyr)
+library(ratdat)
+2️⃣ Inspect the dataset
+head(complete)
+summary(complete)
+View(complete)
+3a) Describe the dataset
+Example answer you can write:
+Answer:
+
+The dataset complete contains biological data about rodents. Each row represents an individual observation and the columns contain information such as genus, species, hindfoot length, and other measurements. Some rows contain missing values (NA).
+
+3b) Why use filter() instead of select()?
+Answer:
+We used filter() because we wanted to remove rows that contain NA values in the hindfoot_length column. The filter() function removes rows based on conditions. select() would not work because it is used to choose columns, not remove rows.
+
+4️⃣ Create dataframe with specific columns
+df <- complete %>%
+  select(genus, species, hindfoot_length)
+5️⃣ Create genus_species column
+df <- df %>%
+  mutate(genus_species = paste(genus, species, sep = "_"))
+6a) Inspect dummy dataset
+head(df_dummy)
+summary(df_dummy)
+View(df_dummy)
+Description answer:
+The dataset contains six observations with four columns: group, location, number, and distance_traveled. Each row represents a group and the location where it was observed along with the distance traveled.
+
+6a (grouped dataset inspection)
+df_grouped1
+Answer:
+After using group_by(location), the dataset appears mostly the same, but RStudio shows "Groups: location" at the top. This means the data is now grouped by location even though the rows look the same.
+
+Distance traveled per location
+df_grouped1 <- df_grouped1 %>%
+  mutate(group_distance = sum(distance_traveled))
+6b) Explanation
+Answer:
+This did not work as expected because mutate() calculates the sum for each group and repeats that value for every row in that group. We wanted a single total per location instead.
+
+6c) Total individuals across groups
+df_grouped1 <- df_grouped1 %>%
+  mutate(sum = sum(number))
+6d) Explanation
+Answer:
+We get three different sum values instead of one total because the data is still grouped by location. The sum() function is applied separately within each location group rather than across the entire dataset.
 ```
 
 We have 3 sum values instead of the desired overall sum!
@@ -168,7 +244,11 @@ Now try repeating the above process in one pipe (creating new dataframe `df_grou
 
 ```{r}
 
-
+df_grouped2 <- df_dummy %>%
+  group_by(location) %>%
+  mutate(group_distance = sum(distance_traveled)) %>%
+  ungroup() %>%
+  mutate(sum = sum(number))
 ```
 :::
 
@@ -178,13 +258,19 @@ Now that you have learned about `group_by()` and the importance of `ungroup()`, 
 
 ```{r}
 
-
+df <- df %>%
+  group_by(genus_species) %>%
+  mutate(mean_hindfoot = mean(hindfoot_length)) %>%
+  ungroup()
 ```
 
 #### 8) Similarly, calculate the standard deviation of hindfoot lengths by species in the new column `sd_hindfoot`.
 
 ```{r}
-
+df <- df %>%
+  group_by(genus_species) %>%
+  mutate(sd_hindfoot = sd(hindfoot_length)) %>%
+  ungroup()
 ```
 
 Let's take the species *Dipodomys merriami* (Rodentia: Heteromyidae) because it has the highest n in our current data frame.
@@ -242,15 +328,18 @@ sd <- sd(normal_distribution_df$value)
 #### 10) Inspect the data using `summary()` and describe it
 
 ```{r}
-
+summary(normal_distribution_df)
 ```
 
 ```         
+The dataset contains randomly generated numbers from a normal distribution. The values are centered around 0 with a standard deviation close to 1.
 ```
 
 #### 11) Now plot the dataset using a `geom_point()` scatter plot
 
 ```{r}
+ggplot(normal_distribution_df, aes(x = index, y = value)) +
+  geom_point()
 
 
 ```
@@ -258,6 +347,7 @@ sd <- sd(normal_distribution_df$value)
 #### 12) What are your initial impressions of the shape and distribution of this dataset?
 
 ```         
+The scatter plot appears random with no clear pattern because the values were generated randomly from a normal distribution.
 ```
 
 Plot this distribution as a histogram
@@ -270,12 +360,14 @@ Plot this distribution as a histogram
 
 ```{r}
 
-
+ggplot(normal_distribution_df, aes(x = value)) +
+  geom_histogram(bins = 1000)
 ```
 
 #### 13) What are your impressions of the shape and distribution of this dataset now that it is presented as a histogram? If your impression has changed, how is that possible?
 
 ```         
+The histogram shows a bell-shaped curve typical of a normal distribution. It is symmetric around the mean and most values are concentrated near the center.
 ```
 
 ## `dnorm()`
@@ -293,6 +385,7 @@ dnorm(2, mean = mean, sd = sd)
 #### 13b) Gut check: look at the plot, does this number make sense? Why or why not?
 
 ```         
+Yes, the probability is small because the chance of drawing exactly one specific value from a continuous distribution is very low.
 ```
 
 Now let's return to our `df` dataset
@@ -302,6 +395,7 @@ Now let's return to our `df` dataset
 *Hint: you can use what we just learned about bin sizes to "zoom" into the data*
 
 ```         
+Based on the histogram, the mean and mode appear to be around 24–26 mm for hindfoot length.
 ```
 
 #### 15a) Calculate the probability that a value randomly drawn from our *D. merriami* hindfoot length is equal to your visual estimate of the **mean**.
@@ -327,27 +421,32 @@ sd_hindfoot <- df %>%
 
 ```{r}
 
+dnorm(25, mean = mean_hindfoot, sd = sd_hindfoot)
 ```
 
 #### 15b) From these results do your visual estimates seem accurate? Why or why not do you think that is?
 
 ```         
+The estimates seem reasonable because the visual estimate falls near the center of the distribution where the probability density is highest.
 ```
 
 #### 16a) Calculate the probability that a value randomly drawn from our *D. merriami* hindfoot length is equal to your visual estimate of the **mode**.
 
 ```{r}
 
+dnorm(25, mean = mean_hindfoot, sd = sd_hindfoot)
 ```
 
 #### 16b) From these results do your visual estimates seem accurate? Why or why not do you think that is?
 
 ```         
+The mode should have one of the highest probability densities because it represents the most frequent value in the distribution.
 ```
 
 #### 17) Opinion: what was the most useful and least useful aspect of this lab assignment? Why is that the case for you?
 
 ```         
+The most useful aspect of the lab was learning how to use dplyr functions such as group_by(), mutate(), and ungroup() to manipulate data efficiently. The least useful part was the trial-and-error with grouping because it can be confusing when the dataset visually appears unchanged.
 ```
 
 # References
@@ -355,4 +454,5 @@ sd_hindfoot <- df %>%
 #### 18) What outside sources did you use to help you complete this work (including books, forums, LLMs, etc.)? Describe how they were used:
 
 ```         
+I used the R documentation, class lecture notes, and AI to understand how to use dplyr functions, grouping operations, and probability distribution functions in R.
 ```
