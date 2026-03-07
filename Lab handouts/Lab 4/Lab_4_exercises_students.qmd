@@ -4,7 +4,11 @@
 
 ```{r setup, include=FALSE}
 
+library(readr)
+library(dplyr)
+library(ggplot2)
 
+data <- read_csv("Blasius_et_al_2019.csv")
 
 ```
 
@@ -19,55 +23,58 @@ In this lab, you will further explore predator/prey dynamics utilizing real-worl
 # Use functions like head(), summary(), dim(), names(), str(), View()
 # These will be useful throughout the semester
 
-
-
-```
-
-```{r}
-
-
+head(data)
 
 ```
 
 ```{r}
 
 
+summary(data)
+```
+
+```{r}
+
+dim(data)
+
+```
+
+```{r}
+
+names(data)
+
+```
+
+```{r}
+
+str(data)
 
 ```
 
 ```{r}
 
 
-
-```
-
-```{r}
-
-
-
-```
-
-```{r}
-
-
-
+View(data)
 ```
 
 ```{r}
 
 # Produce simple plots like histograms and scatter plots.
-
-
-```
-
-```{r}
-
-
+ggplot(data, aes(x = `rotifers (animals/ml)`)) +
+  geom_histogram(bins = 30)
 
 ```
 
 ```{r}
 
+ggplot(data, aes(x = `algae (10^6 cells/ml)`)) +
+  geom_histogram(bins = 30)
+
+```
+
+```{r}
+ggplot(data, aes(x = `time (days)`, y = `rotifers (animals/ml)`)) +
+  geom_point()
 
 
 ```
@@ -75,6 +82,7 @@ In this lab, you will further explore predator/prey dynamics utilizing real-worl
 ### Q: Describe the dataset and what you see. (*Hint: Think about things like column names and what they mean (e.g. describe the species in the dataset), unique values in key columns, size of dataset, ranges of values for certain columns, aspect of the dataset that you may need to clean, what the distributions of the values look like for given columns, etc.*)
 
 ``` plaintext
+The dataset contains predator–prey population data measured over time. The predator species is rotifers and the prey species is algae. The dataset includes columns for time (days), rotifer population density (animals/ml), and algae population density (10^6 cells/ml). The dataset contains multiple observations across time showing how the predator and prey populations change. Some rows may contain missing values which need to be removed before analysis.
 ```
 
 ## Exercise 1: Clean your data using dplyr. *Hint: Were there columns in your data that contained data that was a not a number? For this assignment you can remove entire rows that are problematic. Keep checking your data until all problematic data is removed.*
@@ -85,7 +93,11 @@ In this lab, you will further explore predator/prey dynamics utilizing real-worl
 
 
 # View the cleaned data
+clean_data <- data %>%
+  filter(!is.na(`rotifers (animals/ml)`)) %>%
+  filter(!is.na(`algae (10^6 cells/ml)`))
 
+View(clean_data)
 
 ```
 
@@ -99,18 +111,27 @@ end_time <- 4
 
 # Plot predator population over time
 
+start_time <- 0
+end_time <- 4
 
+ggplot(clean_data, aes(x = `time (days)`, y = `rotifers (animals/ml)`)) +
+  geom_line() +
+  xlim(start_time, end_time) +
+  ylim(0, 50) +
+  labs(x = "Time (days)", y = "Rotifers (animals/ml)")
 
 ```
 
 ### Q: What type of response curve do you see? Explain your reasoning.
 
 ``` plaintext
+The predator population shows a rapid increase over the first few days, which looks like an exponential growth curve.
 ```
 
 ### Q: Why might this predator have this type of response curve?
 
 ``` plaintext
+The predator population increases quickly because prey (algae) are abundant at the beginning, allowing the rotifers to reproduce rapidly.
 ```
 
 ## Exercise 4: Plot the predator and prey populations over all time in the same chart.
@@ -118,13 +139,16 @@ end_time <- 4
 ## *Hint: set your x normally. Then try setting `y` inside of the `aes()` of 2 different `geom_line()`*s.
 
 ```{r}
-
+ggplot(clean_data, aes(x = `time (days)`)) +
+  geom_line(aes(y = `rotifers (animals/ml)`), color = "blue") +
+  geom_line(aes(y = `algae (10^6 cells/ml)`), color = "green")
 
 ```
 
 ### Q: Are you able to interpret this chart? Why or why not?
 
 ``` plaintext
+It is difficult to interpret because the predator and prey populations are on very different scales, so one line dominates the plot.
 ```
 
 ## Exercise 5: Use the following code to plot predator and prey populations over time in the same chart (*Note that there are two Y-axes displayed in the same plot*).
@@ -153,11 +177,13 @@ read_csv("Blasius_et_al_2019.csv") %>%
 ### Q: What do you observe?
 
 ``` plaintext
+The prey population increases first, followed by an increase in the predator population. After the predator population increases, the prey population decreases. This pattern repeats in cycles.
 ```
 
 ### Q: Do you think this system is stable or unstable? Explain.
 
 ``` plaintext
+The system appears relatively stable because the predator and prey populations fluctuate in cycles but do not collapse completely.
 ```
 
 # Rosenzweig-MacArthur model
@@ -187,13 +213,47 @@ $$
 
 # Plot
 
+library(deSolve)
 
+Time <- seq(0, 200, by = 0.1)
+
+r <- 0.5
+a <- 0.01
+f <- 0.1
+q <- 0.2
+h <- 0.001
+K <- 1000
+
+N0 <- clean_data %>% slice(1) %>% pull(`algae (10^6 cells/ml)`)
+P0 <- clean_data %>% slice(1) %>% pull(`rotifers (animals/ml)`)
+
+state <- c(N = N0, P = P0)
+
+model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    
+    dN <- r*N*(1 - N/K) - (a*N*P)/(1 + a*h*N)
+    dP <- f*(a*N*P)/(1 + a*h*N) - q*P
+    
+    list(c(dN, dP))
+  })
+}
+
+out <- ode(y = state, times = Time, func = model, parms = NULL)
+
+out_df <- as.data.frame(out)
+
+ggplot(out_df, aes(x = time)) +
+  geom_line(aes(y = N), color = "green") +
+  geom_line(aes(y = P), color = "blue") +
+  labs(y = "Population", x = "Time")
 
 ```
 
 ### Q: Do you think this system is stable or unstable? Explain.
 
 ``` plaintext
+The system tends to show oscillating predator–prey cycles, which indicates a dynamic but stable ecological interaction.
 ```
 
 # Functional Responses
@@ -217,17 +277,39 @@ $$
 # Plot the function using ggplot2 and stat_function()
 
 
+b <- 0.5
+q <- 0.2
+h <- 0.1
 
+df <- data.frame(N = seq(0, 50, length.out = 100))
+
+ggplot(df, aes(x = N)) +
+  stat_function(fun = function(N){
+    (b*N^(1+q))/(1 + b*h*N^(1+q))
+  }) +
+  labs(x = "Prey Density", y = "Prey Killed per Predator")
 ```
 
 ### Q: What do you notice as you vary the values of the terms?
 
 ``` plaintext
+b <- 0.5
+q <- 0.2
+h <- 0.1
+
+df <- data.frame(N = seq(0, 50, length.out = 100))
+
+ggplot(df, aes(x = N)) +
+  stat_function(fun = function(N){
+    (b*N^(1+q))/(1 + b*h*N^(1+q))
+  }) +
+  labs(x = "Prey Density", y = "Prey Killed per Predator")
 ```
 
 ### Q: Which response curves do you observe?
 
 ```         
+Changing parameters like attack rate (b) or handling time (h) changes the shape of the curve. Higher attack rates increase prey capture, while higher handling time slows the predator's feeding rate.The model produces functional response curves similar to Type II or Type III predator responses.
 ```
 
 ------------------------------------------------------------------------
@@ -235,11 +317,13 @@ $$
 #### Opinion: what was the most useful and least useful aspect of this lab assignment? Why is that the case for you?
 
 ``` plaintext
+The most useful aspect of this lab was learning how to visualize predator–prey interactions and understand ecological dynamics using real data. The least useful aspect was debugging code, which sometimes slowed down the analysis process.
 ```
 
 #### What outside sources did you use to help you complete this work (including books, forums, LLMs, etc.)? Describe how they were used:
 
 ``` plaintext
+I used lecture notes, R documentation, and AI to understand how to run predator–prey models and create plots in R.
 ```
 
 # References
