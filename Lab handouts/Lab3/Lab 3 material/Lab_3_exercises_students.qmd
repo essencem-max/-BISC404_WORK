@@ -2,6 +2,10 @@
 
 ```{r setup, include=FALSE}
 
+rm(list = ls())
+
+library(ggplot2)
+library(dplyr)
 
 ```
 
@@ -11,7 +15,13 @@ In this lab, we will delve deeper into population dynamics, exploring both densi
 
 # Exercise 1:
 
-Using the `tribbles.rds` dataset provided, write an R script to plot the population size of tribbles over **5 days** using `ggplot2` for plotting and `dplyr` for data wrangling. Plot using the `geom_line()` function.
+Load the `tribbles.rds` dataset provided.
+
+```{r}
+
+tribbles <- readRDS("tribbles.rds")
+
+```
 
 ::: callout-tip
 ## \`.Rds\` and \`.Rda\` files in R
@@ -23,76 +33,173 @@ The main advantage of `.rda` files is that they can contain a variety of data in
 `.rds` files can only contain a single data structure. A benefit of this file type is that loading a `.rds` file will not overwrite data structures with the same name.
 :::
 
+### Inspect (using `head()`, `summary()`, `str()`, etc.) and describe the dataset (*hint: what do you need to clean?)*:
+
 ```{r}
 
-# Load the data
-tribbles <- readRDS(file = "tribbles.rds")
+
+head(tribbles)
+
+```
+
+```{r}
+summary(tribbles)
+
+
+```
+
+```{r}
+
+str(tribbles)
+
+```
+
+```{=plaintext}
+The dataset contains tribble population counts across multiple days. Each row represents a day and the number of tribbles observed. The dataset may need cleaning if there are missing values or incorrect data types.
+```
+### Clean the dataset based on the cleaning we performed in the previous homework assignment
+
+```{r}
+# Clean the data
+tribbles <- tribbles %>%
+  filter(!is.na(population))
+
+```
+
+### **Step 1: Visualizing Real Data**
+
+Write an R script to plot the population size of tribbles over **5 days** using `ggplot2` for plotting and `dplyr` for data wrangling. Plot using the `geom_line()` function.
+
+```{r}
 
 # Filter the data
 
 
-# Plot the filtered data, hint: use xlim(c(1, 5)) to set limits for the x-axis to only show up to day 5
+# Plot the filtered data. Hint, use xlim(c(1, 5)) to set limits for the x-axis to only show up to day 5. You may need to use ylim(...) as well.
 
+tribbles_5 <- tribbles %>%
+  filter(day <= 5)
 
-
+ggplot(tribbles_5, aes(x = day, y = population)) +
+  geom_line() +
+  xlim(c(1,5)) +
+  labs(x = "Day", y = "Population", title = "Tribble Population Growth (First 5 Days)")
 ```
 
 ### Q1: What general trend do you observe in the growth of the tribble population over this period? Does the population appear to be increasing, decreasing, or remaining stable?
 
-### Q2: Does population growth apper to be discrete or continuous? Why?
+```{=plaintext}
+The population appears to be increasing rapidly over the five days.
+```
+### Q2: Does population growth appear to be discrete or continuous? Why?
 
+```{=plaintext}
+The population growth appears discrete because population counts are measured at specific time steps (days).
+```
 ### Q3: Does population growth appear to be density-independent? Why or why not? Which equation, if any, do you think might best fit the trend?
 
+```{=plaintext}
+The growth initially appears density-independent, meaning the population increases at a constant proportional rate. An exponential growth equation may fit this trend.
+```
 ### Q4: If you think it may be a density-dependent trend, what would you estimate is the carrying capacity of the tribble population?
 
+```{=plaintext}
+If density-dependent growth occurs, the carrying capacity would likely be around the maximum observed population value in the dataset.
+```
 ### Q5: What are some biological, ecological, or stoichastic explanations that could explain the observed trend?
 
+```{=plaintext}
+Possible explanations include rapid reproduction, abundant food resources, lack of predators, or random environmental variation.
+```
 ### Q6: What might be some expected consequences of this trend for the tribble population for the people living on the ship?
 
-### **Step 2: Extract Growth Parameters**
+```{=plaintext}
+Rapid population growth could overwhelm resources on the ship, causing food shortages, overcrowding, and problems for the crew.
+```
+### **Step 2: Modeling Population Growth**
 
-1.  Use **dplyr** to extract the **initial population size** ((N_0)) (*hint, remember `pull()` from the previous assignment*) and **growth rate** ((\lambda)).
-2.  We assume the per capita growth rate ((\lambda)) can be estimated as the ratio between consecutive population sizes. (*hint, this is a ratio between N0 and our current day, which is day 5*)
+Now we are going to try to model population growth based on the curve you see from your data. If we accept these models, they will allow us to make generalizations and longer term predictions.
+
+1.  Use **dplyr** to extract the **initial population size** $N_{0}$ (*hint, remember `pull()` from the previous assignment*) and **growth rate** $\lambda$. Think about the situations where you would need to use $r$ versus $\lambda$
+2.  We assume the per capita growth rate $\lambda$ can be estimated as the ratio between population sizes. In our case, use $\frac{N_{0 + 1}}{N_{0}}$ to estimate $\lambda$.
+3.  If you think you need to include $K$, just set $K$ equal to the largest population number within your current timespan.
 
 ```{r}
-# Extract initial population size (N0)
+# Extract initial population size (N0). Hint: remember `pull()` from the previous lab assignment
+
+# Extract consecutive population size (day 2)
 
 
-# Estimate lambda using the ratio of consecutive population sizes
+# Calculate Lambda
+
+
+# Calculate r if necessary
 
 
 # Print estimated values
+N0 <- tribbles %>%
+  filter(day == 1) %>%
+  pull(population)
 
+N1 <- tribbles %>%
+  filter(day == 2) %>%
+  pull(population)
 ```
 
-Like we did in lab, use our equation for Q3 and `sapply()` to calculate when the tribble population size for each day until the population exceeds **111,537 tribbles** based on our current assumptions - If you think density-independent, you can use lambda directly in your equation. - If you think logistic growth, remember from lab how to convert lambda to r. We will assume K is equal to the largest population number within the given time span.
+Like we did in lab, use `sapply()` to calculate when the tribble population size for each day until the population exceeds **111,537 tribbles** based on our current assumptions
+
+\- If you think density-independent, you can use lambda directly in your equation.
+
+\- If you think logistic growth, remember from lab how to convert lambda to r. We will assume K is equal to the largest population number within the given time span.
+
+\- Be sure to choose the function inside of `sapply()` intentionally, either the exponential or logistic equation from the lab handout.
 
 ```{r}
-# Set the value for t
+
+# Set the appropriate t
 
 
-# Use sapply() to calculate population sizes
+# Use sapply() to model population sizes
+lambda <- N1 / N0
+r <- log(lambda)
 
-
+lambda
+r
 ```
 
 Plot your results like we did in lab:
 
 ```{r}
 
-# convert to dataframe
+# Convert to dataframe
 
-# plot
 
+# Plot
+
+
+t <- 1:20
+
+pop_model <- sapply(t, function(t){
+  N0 * lambda^t
+})
 ```
 
-### Q: Does this model match with your plot of the real data above?
-
 ### Q: What does this plot imply about the population growth of tribbles on the ship?
+
+```{=plaintext}
+The model suggests the tribble population will grow exponentially, quickly reaching extremely large numbers.
+```
+### Q: Does the shape of this model match with your plot of the real data above? Do you think it is an accurate model of our system?
+
+```{=plaintext}
+The model roughly matches the early data but may not be accurate long-term because real populations eventually slow due to limited resources.
+```
 
 ------------------------------------------------------------------------
 
 # Exercise 2:
+
+### **Step 1: Visualizing Real Data**
 
 Now plot over 8 days and answer the questions below based on this plot.
 
@@ -101,47 +208,99 @@ Now plot over 8 days and answer the questions below based on this plot.
 # Filter the data
 
 
-# Plot the filtered data. Hint, use xlim(c(1, 8))  
+# Plot the filtered data. Hint, use xlim(c(1, 8)) 
+tribbles_8 <- tribbles %>%
+  filter(day <= 8)
+
+ggplot(tribbles_8, aes(x = day, y = population)) +
+  geom_line() +
+  xlim(c(1,8))
 
 
 ```
 
 ### Q1: What general trend do you observe in the growth of the tribble population over this period? Does the population appear to be increasing, decreasing, or remaining stable?
 
-### Q2: Does population growth apper to be discrete or continuous? Why?
+```{=plaintext}
+Population continues increasing rapidly.
+```
+### Q2: Does population growth appear to be discrete or continuous? Why?
 
+```{=plaintext}
+Growth appears discrete because it is measured by day.
+```
 ### Q3: Does population growth appear to be density-independent? Why or why not? Which equation, if any, do you think might best fit the trend?
 
+```{=plaintext}
+The curve may begin showing density-dependent growth, meaning the rate slows as population increases.
+```
 ### Q4: If you think it may be a density-dependent trend, what would you estimate is the carrying capacity of the tribble population?
 
+```{=plaintext}
+The carrying capacity appears near the largest population value observed.
+```
 ### Q5: What are some biological, ecological, or stoichastic explanations that could explain the observed trend?
 
+```{=plaintext}
+Possible causes include limited food, space constraints, or competition among tribbles.
+```
 ### Q6: What might be some expected consequences of this trend for the tribble population for the people living on the ship?
 
-### **Step 2: Extract Growth Parameters**
+```{=plaintext}
+The ship may experience overcrowding, resource depletion, and operational problems.
+```
+### **Step 2: Modeling Population Growth**
 
-1.  Use **dplyr** to extract the **initial population size** ((N_0)) (*hint, remember `pull()` from the previous assignment*) and **growth rate** ((\lambda)).
-2.  We assume the per capita growth rate ((\lambda)) can be estimated as the ratio between consecutive population sizes. (*hint, this is a ratio between N0 and our current day, which is day 8*)
+Now we are going to try to model population growth based on the curve you see from your data. If we accept these models, they will allow us to make generalizations and longer term predictions.
+
+1.  Use **dplyr** to extract the **initial population size** $N_{0}$ (*hint, remember `pull()` from the previous assignment*) and **growth rate** $\lambda$. Think about the situations where you would need to use $r$ versus $\lambda$
+2.  We assume the per capita growth rate $\lambda$ can be estimated as the ratio between population sizes. In our case, use $\frac{N_{0 + 1}}{N_{0}}$ to estimate $\lambda$.
+3.  If you think you need to include $K$, just set $K$ equal to the largest population number within your current timespan.
 
 ```{r}
 # Extract initial population size (N0)
 
 
-# Estimate lambda using the ratio of consecutive population sizes
+# Extract consecutive population size (day 2)
+
+
+# Calculate lambda
+
+
+# Calculate r only if necessary
+
 
 
 # Print estimated values
+N0 <- tribbles_8 %>%
+  filter(day == 1) %>%
+  pull(population)
+
+N1 <- tribbles_8 %>%
+  filter(day == 2) %>%
+  pull(population)
 
 ```
 
-Like we did in lab, use our equation from Q3 and `sapply()` to calculate when the tribble population size for each day until the population exceeds **111,537 tribbles** based on our current assumptions. - If you think density-independent, you can use lambda directly in your equation. - If you think logistic growth, remember from lab how to convert lambda to r. We will assume K is equal to the largest population number within the given time span.
+Like we did in lab, use `sapply()` to calculate when the tribble population size for each day until the population exceeds **111,537 tribbles** based on our current assumptions
+
+\- If you think density-independent, you can use lambda directly in your equation.
+
+\- If you think logistic growth, remember from lab how to convert lambda to r. We will assume K is equal to the largest population number within the given time span.
+
+\- Be sure to choose the function inside of `sapply()` intentionally, either the exponential or logistic equation from the lab handout.
 
 ```{r}
-# set t
+
+# Set the appropriate t
 
 
-# Use sapply() to calculate population sizes
+# Use sapply() to model population sizes
+lambda <- N1 / N0
+r <- log(lambda)
 
+lambda
+r
 
 ```
 
@@ -149,55 +308,97 @@ Plot your results like we did in lab:
 
 ```{r}
 
-# convert to dataframe
+# Create dataframe
 
-# plot
 
+# Plot
+t <- 1:20
+
+pop_model <- sapply(t, function(t){
+  N0 * lambda^t
+})
+model_df <- data.frame(
+  day = t,
+  population = pop_model
+)
+
+ggplot(model_df, aes(x = day, y = population)) +
+  geom_line()
 ```
 
-### Q: Does this model match with your plot of the real data above?
-
 ### Q: What does this plot imply about the population growth of tribbles on the ship?
+
+```{=plaintext}
+The model indicates rapid exponential growth, suggesting tribbles could quickly overpopulate the ship.
+```
+### Q: Does the shape of this model match with your plot of the real data above? Do you think it is an accurate model of our system?
+
+```{=plaintext}
+```
 
 ------------------------------------------------------------------------
 
 # Exercise 3:
 
+### **Step 1: Visualizing Real Data**
+
 Now plot all time points from the dataset and answer the questions below based on this plot. Use the function `geom_step()` to plot the data.
 
 ```{r}
 
-# create df with full data set (do not filter)
+# Create new dataframe without filtering
 
 
-# plot
+# Plot
 
 
-
+ggplot(tribbles, aes(x = day, y = population)) +
+  geom_step() +
+  labs(title="Tribble Population Over Time")
 ```
 
 ### Q: What general trend do you observe in the growth of the tribble population over this period? Does the population appear to be increasing, decreasing, or remaining stable?
 
-### Q: Does population growth apper to be discrete or continuous? Why?
+```{=plaintext}
+The population shows a strong increasing trend over time.
+```
+### Q: Does population growth appear to be discrete or continuous? Why?
 
+```{=plaintext}
+Growth appears discrete because reproduction occurs in time steps.
+```
 ### Q: Does population growth appear to be density-independent? Why or why not? Which equation, if any, do you think might best fit the trend?
 
+```{=plaintext}
+At large population sizes the growth may become density dependent due to limited resources.
+```
 ### Q: If you think it may be a density-dependent trend, what would you estimate is the carrying capacity of the tribble population?
 
+```{=plaintext}
+The carrying capacity would likely occur near the largest observed population level.
+```
 ### Q: What are some biological, ecological, or stoichastic explanations that could explain the observed trend?
 
+```{=plaintext}
+Rapid reproduction, lack of predators, and abundant resources can explain the trend.
+```
 ### Q: What might be some expected consequences of this trend for the tribble population for the people living on the ship?
+
+```{=plaintext}
+The ship could experience overcrowding, food shortages, and operational disruption.
+```
 
 ------------------------------------------------------------------------
 
 #### Opinion: what was the most useful and least useful aspect of this lab assignment? Why is that the case for you?
 
-``` plaintext
+```{=plaintext}
+The most useful aspect of the lab was learning how to simulate population growth models using R. The least useful aspect was interpreting the assumptions of each model, which can be confusing when multiple growth patterns appear similar.
 ```
-
 # References
 
 #### What outside sources did you use to help you complete this work (including books, forums, LLMs, etc.)? Describe how they were used:
 
-``` plaintext
+```{=plaintext}
+I used class lecture notes, R documentation, and AI to understand how to implement population growth equations and data visualization in R.
 ```
