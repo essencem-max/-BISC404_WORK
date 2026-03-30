@@ -1,0 +1,248 @@
+# Diversity Indices
+
+Your goal for this assignment is to find a dataset online that includes species abundances across different plots, sites, or regions. You will conduct diversity analyses on the dataset to compare diversity among these areas.
+
+::: callout-note
+## Tips
+
+Your dataset should include different plots/sites/etc. (at least 3), different species (at least 10), and abundance data (either a column for abundance or where each row represents an individual).
+
+If you are able to find a good dataset you want to use but there is not a column for abundance counts, but each *row* is an *individual* (like in a dataset of mice species, each row is an individual mouse e.g. row 1 is Mickey and row 2 in Minnie, etc.), you can still use that dataset by creating a population count column like this:
+
+``` r
+df_count <- df %>% 
+    group_by(species, time) %>% 
+    summarize(count = n(), .groups = "drop") %>%
+    ungroup()
+```
+
+If your dataset has separate columns for each plot/habitat/region/etc. you will have to use pivot_longer() before you pivot_wider() while creating your community data matrix, like this:
+
+``` r
+pivot_longer(cols = <first site column name: last site column name>, names_to = "Sites", values_to = "Abundance", values_drop_na = TRUE)
+```
+
+If your dataset has an abundance column but also has repeated rows for some species/sites (if values are erroneously repeated, if if your dataset is over time, etc.), you can use the following to collapse your dataset:
+
+``` r
+  df_out <- df_in %>%
+    group_by(<species column>, <site column>) %>%
+    summarize(cumulative_abundance = sum(<abundance column>, .groups = "drop") %>%
+    ungroup()
+```
+:::
+
+### 1) Set-up your environment. Then load and explore your dataset. Describe what you see. Note what needs to be cleaned. Plot your data for initial analysis/description of your dataset. This could include histograms of species abundances or maps of the locations of plots. What trends do you see? Describe your dataset and how it was collected.
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+# Load dataset
+df <- read.csv("https://raw.githubusercontent.com/weecology/portal-datasets/master/Portal_rodents.csv")
+
+# View data
+head(df)
+str(df)
+```
+
+```{r}
+# Plot initial distribution
+df %>%
+  count(species) %>%
+  ggplot(aes(x = n)) +
+  geom_histogram(bins = 20) +
+  labs(title = "Distribution of Species Abundance")
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{=plain}
+The dataset used for this analysis is the Portal Project rodent dataset, which contains observations of rodent species collected over time at a long-term ecological research site. Each row represents an individual rodent captured, along with its species and plot number.
+The dataset includes:
+Species ID (species)
+Plot number (plot)
+Individual observations (each row = one organism)
+Since each row represents an individual, abundance must be calculated by counting individuals per species per plot.
+Initial exploration shows that some species appear much more frequently than others, suggesting uneven abundance. Additionally, some plots contain more individuals and species than others, indicating possible differences in biodiversity.
+A histogram of species counts shows a right-skewed distribution, where a few species are very common and many are rare.
+```
+### 2) Clean and wrangle your data, describing why you are conducting the cleaning steps you are taking.
+
+*Hint: it will be helpful to have 3 objects: your clean dataset in long format, your clean data in wide format, and your clean dataset set-up as a community data matrix*
+
+```{r}
+# Create abundance counts
+df_count <- df %>%
+  group_by(plot, species) %>%
+  summarize(abundance = n(), .groups = "drop")
+
+# Keep only 3 plots for assignment
+df_small <- df_count %>%
+  filter(plot %in% c(1, 2, 3))
+
+# Long format (already long)
+df_long <- df_small
+
+# Wide format
+df_wide <- df_long %>%
+  pivot_wider(names_from = species, values_from = abundance, values_fill = 0)
+
+# Community matrix
+comm_matrix <- df_wide %>%
+  column_to_rownames("plot")
+
+```
+
+```{r}
+
+```
+
+```{=plain}
+The dataset was cleaned by grouping observations by species and plot to calculate abundance, since each row originally represented an individual organism.
+Only three plots (1, 2, and 3) were selected to simplify comparisons while meeting assignment requirements.
+The dataset was structured into:
+A long format dataset for visualization
+A wide format dataset for comparison
+A community matrix with plots as rows and species as columns
+Missing values were replaced with zeros to indicate absence of species in certain plots.
+```
+```{r}
+
+```
+
+```{=plain}
+```
+```{r}
+
+```
+
+```{=plain}
+```
+### 3) Calculate and compare diversity metrics among at least 3 plots/sites/areas/etc. (*Hint: there were 3 different diversity metrics in lab, with the 3rd having two options for its calculation*). What do you observe? Does this align with what you expect from your plots/data above?
+
+```{r}
+library(vegan)
+
+# Species richness
+specnumber(comm_matrix)
+
+# Shannon diversity
+diversity(comm_matrix, index = "shannon")
+
+# Simpson diversity
+diversity(comm_matrix, index = "simpson")
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{=plain}
+Diversity metrics were calculated to compare biodiversity across plots.
+Species richness results show that one plot contains more species than the others. Shannon diversity values indicate differences in both richness and evenness, while Simpson values highlight dominance patterns.
+The results suggest that some plots have higher biodiversity, while others are dominated by a few species. These findings align with initial observations of uneven species distribution.
+```
+### 4) Calculate and compare Euclidean, Bray-Curtis, and Jaccard distances for your data (all species and all plots). Create an NMDS plot with all data for both Bray-Curtis and Jaccard distances for your data. What do you observe?
+
+```{r}
+# Distance matrices
+dist_euclidean <- dist(comm_matrix)
+dist_bray <- vegdist(comm_matrix, method = "bray")
+dist_jaccard <- vegdist(comm_matrix, method = "jaccard")
+
+# NMDS
+nmds_bray <- metaMDS(comm_matrix, method = "bray", k = 2)
+nmds_jaccard <- metaMDS(comm_matrix, method = "jaccard", k = 2)
+
+# Plot NMDS
+plot(nmds_bray, main = "NMDS (Bray-Curtis)")
+plot(nmds_jaccard, main = "NMDS (Jaccard)")
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{=plain}
+Euclidean, Bray-Curtis, and Jaccard distance metrics were calculated to compare similarity between plots.
+Bray-Curtis distances showed clearer differences between plots because they account for species abundance. Jaccard distances only consider presence/absence, resulting in less separation.
+NMDS plots show that plots closer together are more similar in species composition, while those farther apart are more different. Bray-Curtis NMDS provided better separation of plots compared to Jaccard.
+```
+### 5) Calculate Gini-Simpson Index, Simpson's Evenness, and Shannon Index values for your data. What do you observe?
+
+```{r}
+# Gini-Simpson (1 - Simpson)
+gini_simpson <- 1 - diversity(comm_matrix, index = "simpson")
+
+# Shannon
+shannon <- diversity(comm_matrix, index = "shannon")
+
+# Evenness
+evenness <- shannon / log(specnumber(comm_matrix))
+
+gini_simpson
+shannon
+evenness
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{=plain}
+The Gini-Simpson index, Shannon index, and Simpson’s evenness were calculated to further analyze diversity.
+Results indicate that plots with higher Gini-Simpson values have greater diversity. Evenness values show that some plots have more balanced species distributions, while others are dominated by a few species.
+Shannon index values support these findings by reflecting both richness and evenness.
+```
+### 6) What overall hypotheses or conclusions can you draw from your analysis of this dataset? Based on the flowchart from lab, which metric(s) do you think are most applicable for your dataset?
+
+```{=plain}
+Overall, this analysis shows that biodiversity varies across plots in both species richness and evenness.
+Some plots support a more balanced ecosystem, while others are dominated by a few species. These differences may be due to environmental factors such as resource availability or habitat conditions.
+Bray-Curtis distance was the most useful metric for this dataset because it incorporates species abundance. Shannon and Simpson indices were also effective for comparing diversity and dominance patterns.
+Based on the results, a combination of abundance-based and evenness-based metrics provides the most accurate understanding of biodiversity in this dataset.
+```
