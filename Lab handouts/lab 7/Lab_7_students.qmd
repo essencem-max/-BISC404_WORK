@@ -72,17 +72,25 @@ Now let's plot this relationship in R with potential number of species of 100, a
 ```{r}
 
 # Define parameters
-
+p <- 100      # total species pool
+c <- 0.1      # colonization rate
+h <- 0.05     # extinction rate
 
 # Define the colonization `C_s` and extinction rate `E_s` functions
-C_s <- function(s) {  }
-E_s <- function(s) {  }
+C_s <- function(s) c*{p-s}
+E_s <- function(s) {h*s}
 
 # calculate the equilibrium value  `s_star`
+
+s_star <- (c * p) / (c + h)
+
+s_star
+
 
 
 # Create a sequence of species numbers for plotting
 s_values <- seq(0, p, by=1)
+
 
 # Calculate colonization and extinction rates for each number of species
 C_values <- C_s(s_values)
@@ -99,7 +107,12 @@ Now plot your results. Remember that we can plot more than one line on a single 
 
 ```{r}
 
-
+ggplot(data = df, ase(x=s))+
+  geom_line(aes(y = C, color = "Colonization Rate")) +
+  geom_line(aes(y = E, color = "Extinction Rate")+
+              geom_vline(xintercept = s_star)
+            
+  
 
 ```
 
@@ -134,14 +147,46 @@ summary(lakshadweep_AGATHI_raw)
 
 lakshadweep_AGATHI_clean <- lakshadweep_AGATHI_raw
 
+lakshadweep_AGATHI_clean <- lakshadweep_AGATHI_clean %>%
+mutate(
+  V1 = as.character(V1),
+   V2 = as.character(V2),
+   V3 = as.character(V3)
+)
+
+names(lakshadweep_AGATHI_clean) <- 
+lakshadweep_AGATHI_clean %>% 
+  filter(row_number () == 1)
 
 
+lakshadweep_AGATHI_clean <- 
+lakshadweep_AGATHI_clean  %>% 
+  clean_names() %>%
+  filter(row_number() != 1)
+
+lakshadweep_AGATHI_clean
 ```
 
 ```{r}
 
-lakshadweep_KADMATH_raw <- lakshadweep[[2]]
+lakshadweep_KADMATH_raw <- lakshadweep[[2]] %>%
+mutate(
+  V1 = as.character(V1),
+   V2 = as.character(V2),
+   V3 = as.character(V3)
+)
 
+names(lakshadweep_KADMATH_clean) <- 
+lakshadweep_KADMATH_clean %>% 
+  filter(row_number () == 1)
+
+
+lakshadweep_KADMATH_clean <- 
+lakshadweep_KADMATH_clean %>% 
+  clean_names() %>%
+  filter(row_number() != 1)
+
+lakshadweep_KADMATH_clean
 lakshadweep_KADMATH_clean <- lakshadweep_KADMATH_raw
 
 
@@ -150,7 +195,24 @@ lakshadweep_KADMATH_clean <- lakshadweep_KADMATH_raw
 
 ```{r}
 
-lakshadweep_KAVRATTI_raw <- lakshadweep[[3]]
+lakshadweep_KAVRATTI_raw <- lakshadweep[[3]] %>%
+mutate(
+  V1 = as.character(V1),
+   V2 = as.character(V2),
+   V3 = as.character(V3)
+)
+
+names(lakshadweep_KAVRATTI_clean) <- 
+lakshadweep_KAVRATTI_clean %>% 
+  filter(row_number() == 1)
+
+
+lakshadweep_KAVRATTI_clean <- 
+lakshadweep_KAVRATTI_clean %>% 
+  clean_names() %>%
+  filter(row_number() != 1)
+
+lakshadweep_KAVRATTI_clean
 
 lakshadweep_KAVRATTI_clean <- lakshadweep_KAVRATTI_raw
 
@@ -361,23 +423,58 @@ Incorporate these modifications into our model with these values $A = 3.84$, $D 
 
 # Set the parameters
 
+A <- 3.84
+D <- 459
+c <- 0.1
+f <- 0.01
+m <- 0.25
+q <- 0.2
+P <- 156
+
 # Define the colonization and extinction rate functions
+
+C_s <- function(S) { 
+  (c * (P - S)) / (f * D)
+}
+
+E_s <- function(S) { 
+  (q * S) / (A^m)
+}
+
 
 
 # Create a sequence of species numbers for plotting
 
+S_values <- seq(0, P, by = 1)
+
 
 # Calculate colonization and extinction rates for each number of species
 
+C_values <- C_s(S_values)
+E_values <- E_s(S_values)
+
 # Create a data frame for plotting
 
+df <- data.frame(S = S_values, C = C_values, E = E_values)
+
+head(df)
 
 ```
 
 Assume we have 45 species `S` in our environment. Plot with a vline at 45 using `geom_vline(aes(xintercept = S))`
 
 ```{r}
+# Create the plot
+library(ggplot2)
 
+ggplot(df, aes(x = S)) +
+  geom_line(aes(y = C), color = "blue") +
+  geom_line(aes(y = E), color = "red") +
+  geom_vline(xintercept = 45, linetype = "dashed") +
+  labs(title = "Colonization and Extinction Rates",
+       x = "Number of Species (S)",
+       y = "Rate") +
+  theme_minimal()
 
 
 ```
@@ -402,6 +499,8 @@ We can find a reliable source for the the geological constants we need for these
 
 ![Source](../images/clipboard-598480495.png){fig-align="center" width="590"}
 
+![Source](../images/clipboard-598480495.png){fig-align="center" width="590"}
+
 ![Source](../images/clipboard-201804926.png){fig-align="center" width="588"}
 
 Along with the previous values we calculated, incorporate the details about these islands into the extended model with these values $c = 0.1$, $f = 0.01$, $m = 0.25$, and $q = 0.2$.
@@ -410,17 +509,33 @@ Along with the previous values we calculated, incorporate the details about thes
 
 # Set parameters
 
+c <- 0.1
+f <- 0.01
+m <- 0.25
+q <- 0.2
+P <- p
+
 # Set D_AGATHI and A_AGATHI
+D_AGATHI <- 459 # distance of Agathi island
+A_AGATHI <- 3.84     # area of Agathi island
+
 
 
 # Create a sequence of species numbers for plotting
 
+S_values <- seq(0, P, by = 1)
+
 
 # Calculate colonization and extinction rates for each number of species
 
+C_values <- C_s(S_values)
+E_values <- E_s(S_values)
 
 # Create a data frame for plotting
 
+df_AGATHI_extended <- data.frame(S = S_values, C = C_values, E = E_values)
+
+head(df)
 
 
 ```
@@ -571,14 +686,39 @@ function_name.out <- deSolve::ode(x = X0, times = times, func = function_name, p
 Write a function `levins()` for the Levin's metapopulation model with `parms <- c(c = 0.15, m = 0.06)`, `P0 <- 0.01`, and `times <- 1:100`
 
 ```{r}
+library(deSolve)
 
+levins <- function(t, P, parms) {
+  with(as.list(c(P, parms)), {
+    
+    dP <- c * P * (1 - P) - m * P
+    
+    return(list(dP))
+  })
+}
+parms <- c(c = 0.15, m = 0.06)
+P0 <- 0.01
+times <- 1:100
 
+out <- ode(y = P0, times = times, func = levins, parms = parms)
+
+# Convert to dataframe
+out_df <- as.data.frame(out)
+
+head(out_df)
 ```
 
 Now plot (remember to use `ggplot2`[@ggplot2], we have to first convert our dataset to a dataframe)
 
 ```{r}
+library(ggplot2)
 
+ggplot(out_df, aes(x = time, y = P1)) +
+  geom_line() +
+  labs(title = "Levin's Metapopulation Model",
+       x = "Time",
+       y = "Proportion of Occupied Patches") +
+  theme_minimal()
 
 
 ```
