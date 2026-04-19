@@ -1,0 +1,767 @@
+---
+title: "Essence"
+format:
+  html:
+    self-contained: true
+    toc: true
+  pdf: default
+---
+
+```{r}
+data <- read.csv(file.choose())
+```
+
+```{r}
+head(data)
+colnames(data)
+```
+```{r}
+library(tidyverse)
+
+species_data <- data %>%
+  filter(Species %in% c("Peromyscus maniculatus",
+                        "Dipodomys merriami",
+                        "Microtus californicus")) %>%
+  mutate(time = paste(Year, Month, sep = "-")) %>%
+  drop_na(Abundance_estimate)
+```
+```{r}
+install.packages("tidyverse")
+```
+```{r}
+library(tidyverse)
+```
+```{r}
+species_data <- data %>%
+  filter(Species %in% c("Peromyscus maniculatus",
+                        "Dipodomys merriami",
+                        "Microtus californicus")) %>%
+  mutate(time = paste(Year, Month, sep = "-")) %>%
+  drop_na(Abundance_estimate)
+```
+
+```{r}
+ggplot(species_data,
+       aes(x = as.factor(time),
+           y = Abundance_estimate,
+           color = Species,
+           group = Species)) +
+  geom_line() +
+  theme(axis.text.x = element_blank())
+```
+
+```{r}
+pivot_data <- species_data %>%
+  select(time, Species, Abundance_estimate) %>%
+  pivot_wider(names_from = Species,
+              values_from = Abundance_estimate)
+```
+```{r}
+pivot_data <- species_data %>%
+  group_by(time, Species) %>%
+  summarise(Abundance_estimate = mean(Abundance_estimate, na.rm = TRUE),
+            .groups = "drop") %>%
+  pivot_wider(names_from = Species,
+              values_from = Abundance_estimate)
+```
+
+```{r}
+ model1 <- lm(`Peromyscus maniculatus` ~ `Dipodomys merriami`,
+             data = pivot_data)
+
+summary(model1)
+```
+```{r}
+model2 <- lm(`Peromyscus maniculatus` ~ 
+               `Dipodomys merriami` + 
+               `Microtus californicus`,
+             data = pivot_data)
+
+summary(model2)
+```
+```{r}
+unique(data$Species)
+```
+
+```{r}
+species_data <- data %>%
+  filter(Species %in% c("Peromyscus maniculatus",
+                        "Dipodomys merriami",
+                        "Microtus oregoni")) %>%   # change to an existing species
+  mutate(time = paste(Year, Month, sep = "-")) %>%
+  drop_na(Abundance_estimate)
+```
+
+```{r}
+library(tidyverse)
+
+# Step 1: Filter to your focal species (check names first!)
+species_data <- data %>%
+  filter(Species %in% c("Peromyscus maniculatus",
+                        "Dipodomys merriami",
+                        "Microtus oregoni")) %>%   # pick an existing Microtus
+  mutate(time = paste(Year, Month, sep = "-")) %>%
+  drop_na(Abundance_estimate)
+
+# Step 2: Aggregate by time and species (if multiple observations per month)
+# Use sum or mean – here using sum (total abundance at that time)
+agg_data <- species_data %>%
+  group_by(time, Species) %>%
+  summarise(Abundance = sum(Abundance_estimate), .groups = "drop")
+
+# Step 3: Pivot to wide format
+pivot_data <- agg_data %>%
+  pivot_wider(names_from = Species, values_from = Abundance)
+
+# Check that all three columns exist
+names(pivot_data)
+
+# Step 4: Run your models (replace with actual column names)
+model1 <- lm(`Peromyscus maniculatus` ~ `Dipodomys merriami`, data = pivot_data)
+summary(model1)
+
+model2 <- lm(`Peromyscus maniculatus` ~ `Dipodomys merriami` + `Microtus oregoni`, data = pivot_data)
+summary(model2)
+```
+
+```{r}
+library(tidyverse)
+
+# Assuming pivot_data has columns: time, speciesA, speciesB, speciesC
+# Sort by time and create lagged versions
+comp_data <- pivot_data %>%
+  arrange(time) %>%
+  mutate(across(c(`Peromyscus maniculatus`, `Dipodomys merriami`, `Microtus oregoni`),
+                .fns = list(lag1 = ~ lag(., 1)),
+                .names = "{.col}_lag1")) %>%
+  drop_na()   # remove first time point where lag is NA
+```
+
+```{r}
+# For Peromyscus maniculatus
+ricker_model <- nls( `Peromyscus maniculatus` ~ 
+                     `Peromyscus maniculatus_lag1` * exp(r * (1 - `Peromyscus maniculatus_lag1`/K)),
+                     data = comp_data,
+                     start = list(r = 0.5, K = max(comp_data$`Peromyscus maniculatus`, na.rm = TRUE)) )
+summary(ricker_model)
+
+```
+```{r}
+# For Peromyscus maniculatus (species 1)
+compet_model <- nls( `Peromyscus maniculatus` ~ 
+                     `Peromyscus maniculatus_lag1` * exp( r1 * (1 - (`Peromyscus maniculatus_lag1` + a12*`Dipodomys merriami_lag1` + a13*`Microtus oregoni_lag1`)/K1) ),
+                     data = comp_data,
+                     start = list(r1 = 0.5, K1 = max(comp_data$`Peromyscus maniculatus`), a12 = 0.1, a13 = 0.1) )
+summary(compet_model)
+```
+
+```{r}
+# ============================================================
+# INTERSPECIFIC COMPETITION ANALYSIS
+# Linearized discrete-time Lotka-Volterra model
+# ============================================================
+
+# Load required libraries
+library(tidyverse)
+library(broom)  # for nice coefficient tables
+
+# ---------- 1. Prepare data (if not already done) ----------
+# Assuming your original pivoted data is called 'pivot_data'
+# with columns: time, Peromyscus maniculatus, Dipodomys merriami, Microtus oregoni
+
+# If you don't have comp_data yet, run this:
+comp_data <- pivot_data %>%
+  arrange(time) %>%
+  # Add small constant to avoid log(0) if any zeros exist
+  mutate(across(where(is.numeric), ~ . + 0.001)) %>%
+  # Create lagged columns (abundance at previous time point)
+  mutate(across(c(`Peromyscus maniculatus`, `Dipodomys merriami`, `Microtus oregoni`),
+                .fns = list(lag1 = ~ lag(.)),
+                .names = "{.col}_lag1")) %>%
+  drop_na()  # remove first time point where lag is NA
+
+# ---------- 2. Compute log ratios (per capita growth rate) ----------
+comp_data <- comp_data %>%
+  mutate(
+    log_ratio_PM = log(`Peromyscus maniculatus` / `Peromyscus maniculatus_lag1`),
+    log_ratio_DM = log(`Dipodomys merriami` / `Dipodomys merriami_lag1`),
+    log_ratio_MO = log(`Microtus oregoni` / `Microtus oregoni_lag1`)
+  )
+
+# ---------- 3. Fit linear competition models for each species ----------
+
+# Model for Peromyscus maniculatus
+lm_compet_PM <- lm(log_ratio_PM ~ 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Dipodomys merriami_lag1` + 
+                   `Microtus oregoni_lag1`,
+                   data = comp_data)
+
+# Model for Dipodomys merriami
+lm_compet_DM <- lm(log_ratio_DM ~ 
+                   `Dipodomys merriami_lag1` + 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Microtus oregoni_lag1`,
+                   data = comp_data)
+
+# Model for Microtus oregoni
+lm_compet_MO <- lm(log_ratio_MO ~ 
+                   `Microtus oregoni_lag1` + 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Dipodomys merriami_lag1`,
+                   data = comp_data)
+
+# ---------- 4. Extract and back-transform parameters ----------
+
+# Function to compute ecological parameters from linear model coefficients
+# b0 = r, b1 = -r/K, b2 = -r*α12/K, b3 = -r*α13/K
+extract_competition_params <- function(lm_model, species_name) {
+  coefs <- coef(lm_model)
+  b0 <- coefs[1]          # r
+  b1 <- coefs[2]          # -r/K (effect of own lag)
+  b2 <- coefs[3]          # -r*α_competitor1/K
+  b3 <- coefs[4]          # -r*α_competitor2/K
+  
+  r <- b0
+  K <- -b0 / b1
+  alpha_comp1 <- b2 / b1
+  alpha_comp2 <- b3 / b1
+  
+  # Get p-values for competition coefficients
+  pvals <- summary(lm_model)$coefficients[,4]
+  
+  return(data.frame(
+    Species = species_name,
+    r = r,
+    K = K,
+    alpha_comp1 = alpha_comp1,
+    alpha_comp2 = alpha_comp2,
+    p_comp1 = pvals[3],
+    p_comp2 = pvals[4]
+  ))
+}
+
+params_PM <- extract_competition_params(lm_compet_PM, "Peromyscus maniculatus")
+params_DM <- extract_competition_params(lm_compet_DM, "Dipodomys merriami")
+params_MO <- extract_competition_params(lm_compet_MO, "Microtus oregoni")
+
+# Combine into one table
+competition_results <- bind_rows(params_PM, params_DM, params_MO)
+print(competition_results)
+
+# ---------- 5. Confidence intervals for parameters ----------
+
+# Function to get confidence intervals for back-transformed parameters
+# (using delta method approximation via confint on linear model)
+confint_competition <- function(lm_model, species_name) {
+  ci_linear <- confint(lm_model)
+  b0_ci <- ci_linear[1,]
+  b1_ci <- ci_linear[2,]
+  b2_ci <- ci_linear[3,]
+  b3_ci <- ci_linear[4,]
+  
+  # Back-transform intervals (r = b0, K = -b0/b1, α = b2/b1)
+  r_ci <- b0_ci
+  K_ci <- -b0_ci / b1_ci
+  alpha1_ci <- b2_ci / b1_ci
+  alpha2_ci <- b3_ci / b1_ci
+  
+  return(data.frame(
+    Species = species_name,
+    r_lower = r_ci[1], r_upper = r_ci[2],
+    K_lower = K_ci[1], K_upper = K_ci[2],
+    alpha1_lower = alpha1_ci[1], alpha1_upper = alpha1_ci[2],
+    alpha2_lower = alpha2_ci[1], alpha2_upper = alpha2_ci[2]
+  ))
+}
+
+ci_PM <- confint_competition(lm_compet_PM, "Peromyscus maniculatus")
+ci_DM <- confint_competition(lm_compet_DM, "Dipodomys merriami")
+ci_MO <- confint_competition(lm_compet_MO, "Microtus oregoni")
+
+ci_results <- bind_rows(ci_PM, ci_DM, ci_MO)
+print(ci_results)
+
+# ---------- 6. Model comparison: single-species vs. competition ----------
+
+# Single-species (density-dependent) models
+lm_single_PM <- lm(log_ratio_PM ~ `Peromyscus maniculatus_lag1`, data = comp_data)
+lm_single_DM <- lm(log_ratio_DM ~ `Dipodomys merriami_lag1`, data = comp_data)
+lm_single_MO <- lm(log_ratio_MO ~ `Microtus oregoni_lag1`, data = comp_data)
+
+# Compare using ANOVA and AIC
+compare_models <- function(single_model, compet_model, species) {
+  aic <- AIC(single_model, compet_model)
+  anova_p <- anova(single_model, compet_model)$`Pr(>F)`[2]
+  return(data.frame(Species = species, AIC_single = aic$AIC[1], 
+                    AIC_compet = aic$AIC[2], anova_p = anova_p))
+}
+
+comparison <- bind_rows(
+  compare_models(lm_single_PM, lm_compet_PM, "Peromyscus maniculatus"),
+  compare_models(lm_single_DM, lm_compet_DM, "Dipodomys merriami"),
+  compare_models(lm_single_MO, lm_compet_MO, "Microtus oregoni")
+)
+print(comparison)
+
+# ---------- 7. Plot zero-growth isoclines for the two strongest competitors ----------
+# (choose the pair with significant competition based on p-values)
+
+# Example for Peromyscus vs Dipodomys (assuming they are significant)
+# Get parameters from competition_results
+r_PM <- params_PM$r
+K_PM <- params_PM$K
+alpha_PM_DM <- params_PM$alpha_comp1   # effect of Dipodomys on Peromyscus
+
+# For Dipodomys, need alpha of Peromyscus on Dipodomys
+alpha_DM_PM <- params_DM$alpha_comp1   # effect of Peromyscus on Dipodomys
+K_DM <- params_DM$K
+
+# Create isocline functions
+isocline_PM <- function(N_DM) K_PM - alpha_PM_DM * N_DM
+isocline_DM <- function(N_PM) K_DM - alpha_DM_PM * N_PM
+
+# Create a data frame for plotting
+N_range <- seq(0, max(comp_data$`Peromyscus maniculatus`, comp_data$`Dipodomys merriami`), length.out = 100)
+
+isocline_data <- data.frame(
+  N_DM = N_range,
+  N_PM_isocline = isocline_PM(N_range),
+  N_PM_for_DM = N_range,
+  N_DM_isocline = isocline_DM(N_range)
+)
+
+# Plot
+ggplot() +
+  geom_path(data = comp_data, aes(x = `Dipodomys merriami`, y = `Peromyscus maniculatus`), 
+            alpha = 0.5, arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
+  geom_point(data = comp_data, aes(x = `Dipodomys merriami`, y = `Peromyscus maniculatus`, color = time)) +
+  geom_line(data = isocline_data, aes(x = N_DM, y = N_PM_isocline), color = "blue", linetype = "dashed", size = 1) +
+  geom_line(data = isocline_data, aes(x = N_PM_for_DM, y = N_DM_isocline), color = "red", linetype = "dashed", size = 1) +
+  labs(x = "Dipodomys merriami abundance", y = "Peromyscus maniculatus abundance",
+       title = "Zero-growth isoclines: Peromyscus vs Dipodomys",
+       subtitle = "Blue: Peromyscus isocline, Red: Dipodomys isocline") +
+  theme_minimal() +
+  annotate("text", x = max(comp_data$`Dipodomys merriami`)*0.8, y = max(comp_data$`Peromyscus maniculatus`)*0.9,
+           label = ifelse(alpha_PM_DM > 0 & alpha_DM_PM > 0, "Possible coexistence if isoclines cross", 
+                          "Competitive exclusion likely"))
+
+# ---------- 8. Check model assumptions ----------
+# Residual plots - view one at a time (press Enter in console to advance)
+plot(lm_compet_PM, which = 1)  # residuals vs fitted
+plot(lm_compet_PM, which = 2)  # Q-Q plot
+plot(lm_compet_PM, which = 3)  # scale-location
+plot(lm_compet_PM, which = 4)  # Cook's distance
+
+# Test for temporal autocorrelation in residuals
+acf_resid_PM <- acf(residuals(lm_compet_PM), plot = TRUE, main = "ACF of residuals - Peromyscus")
+# If significant lag 1 autocorrelation, note as limitation
+
+# ---------- 9. Summary report for your project ----------
+
+cat("\n========== INTERSPECIFIC COMPETITION RESULTS ==========\n")
+cat("\nParameters (r = intrinsic growth rate, K = carrying capacity, α = competition coefficient)\n")
+print(competition_results)
+
+cat("\n\nInterpretation:\n")
+for(i in 1:nrow(competition_results)) {
+  sp <- competition_results$Species[i]
+  a1 <- competition_results$alpha_comp1[i]
+  a2 <- competition_results$alpha_comp2[i]
+  p1 <- competition_results$p_comp1[i]
+  p2 <- competition_results$p_comp2[i]
+  cat(sprintf("\n%s:\n", sp))
+  cat(sprintf("  - r = %.3f, K = %.1f\n", competition_results$r[i], competition_results$K[i]))
+  if(p1 < 0.05) cat(sprintf("  - Significant competition from competitor 1 (α = %.3f, p = %.4f)\n", a1, p1))
+  else cat(sprintf("  - No significant competition from competitor 1 (α = %.3f, p = %.4f)\n", a1, p1))
+  if(p2 < 0.05) cat(sprintf("  - Significant competition from competitor 2 (α = %.3f, p = %.4f)\n", a2, p2))
+  else cat(sprintf("  - No significant competition from competitor 2 (α = %.3f, p = %.4f)\n", a2, p2))
+}
+
+cat("\nModel comparison (single-species vs. competition):\n")
+print(comparison)
+```
+```{r}
+# ============================================================
+# INTERSPECIFIC COMPETITION ANALYSIS - COMPLETE SCRIPT
+# Linearized discrete-time Lotka-Volterra model
+# ============================================================
+
+library(tidyverse)
+
+# ---------- 1. Prepare data (assumes pivot_data exists) ----------
+# Add small constant to avoid log(0) and infinite values
+pivot_data_adj <- pivot_data %>%
+  mutate(across(where(is.numeric), ~ . + 0.1))
+
+# Create time-ordered dataset with lagged abundances
+comp_data <- pivot_data_adj %>%
+  arrange(time) %>%
+  mutate(across(c(`Peromyscus maniculatus`, `Dipodomys merriami`, `Microtus oregoni`),
+                .fns = list(lag1 = ~ lag(.)),
+                .names = "{.col}_lag1")) %>%
+  drop_na()  # remove first time point
+
+# Check that we have enough data
+if(nrow(comp_data) < 5) stop("Not enough time points after creating lags.")
+
+# ---------- 2. Compute log ratios (per capita growth rate) ----------
+comp_data <- comp_data %>%
+  mutate(
+    log_ratio_PM = log(`Peromyscus maniculatus` / `Peromyscus maniculatus_lag1`),
+    log_ratio_DM = log(`Dipodomys merriami` / `Dipodomys merriami_lag1`),
+    log_ratio_MO = log(`Microtus oregoni` / `Microtus oregoni_lag1`)
+  )
+
+# Remove any rows where log ratios are infinite (rare, but safe)
+comp_data <- comp_data %>%
+  filter(is.finite(log_ratio_PM), is.finite(log_ratio_DM), is.finite(log_ratio_MO))
+
+if(nrow(comp_data) < 3) stop("Too few finite log ratios after filtering.")
+
+# ---------- 3. Fit linear competition models ----------
+lm_compet_PM <- lm(log_ratio_PM ~ 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Dipodomys merriami_lag1` + 
+                   `Microtus oregoni_lag1`,
+                   data = comp_data)
+
+lm_compet_DM <- lm(log_ratio_DM ~ 
+                   `Dipodomys merriami_lag1` + 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Microtus oregoni_lag1`,
+                   data = comp_data)
+
+lm_compet_MO <- lm(log_ratio_MO ~ 
+                   `Microtus oregoni_lag1` + 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Dipodomys merriami_lag1`,
+                   data = comp_data)
+
+# ---------- 4. Extract and back‑transform parameters ----------
+extract_params <- function(model, species_name, comp1_name, comp2_name) {
+  coefs <- coef(model)
+  if(any(is.na(coefs))) return(data.frame(Species = species_name, r = NA, K = NA, 
+                                          alpha_comp1 = NA, alpha_comp2 = NA,
+                                          p_comp1 = NA, p_comp2 = NA))
+  b0 <- coefs[1]
+  b1 <- coefs[2]  # own lag
+  b2 <- coefs[3]  # competitor 1
+  b3 <- coefs[4]  # competitor 2
+  
+  r <- b0
+  K <- -b0 / b1
+  alpha1 <- b2 / b1
+  alpha2 <- b3 / b1
+  
+  pvals <- summary(model)$coefficients[,4]
+  p1 <- ifelse(length(pvals) >= 3, pvals[3], NA)
+  p2 <- ifelse(length(pvals) >= 4, pvals[4], NA)
+  
+  return(data.frame(Species = species_name, r = r, K = K, 
+                    alpha_comp1 = alpha1, alpha_comp2 = alpha2,
+                    p_comp1 = p1, p_comp2 = p2))
+}
+
+params_PM <- extract_params(lm_compet_PM, "Peromyscus maniculatus", "Dipodomys", "Microtus")
+params_DM <- extract_params(lm_compet_DM, "Dipodomys merriami", "Peromyscus", "Microtus")
+params_MO <- extract_params(lm_compet_MO, "Microtus oregoni", "Peromyscus", "Dipodomys")
+
+competition_results <- bind_rows(params_PM, params_DM, params_MO)
+
+# ---------- 5. Model comparison (single-species vs. competition) ----------
+lm_single_PM <- lm(log_ratio_PM ~ `Peromyscus maniculatus_lag1`, data = comp_data)
+lm_single_DM <- lm(log_ratio_DM ~ `Dipodomys merriami_lag1`, data = comp_data)
+lm_single_MO <- lm(log_ratio_MO ~ `Microtus oregoni_lag1`, data = comp_data)
+
+compare_models <- function(single, compet, sp_name) {
+  aic <- AIC(single, compet)
+  anova_p <- tryCatch(anova(single, compet)$`Pr(>F)`[2], error = function(e) NA)
+  return(data.frame(Species = sp_name, 
+                    AIC_single = aic$AIC[1], 
+                    AIC_compet = aic$AIC[2],
+                    delta_AIC = aic$AIC[2] - aic$AIC[1],
+                    anova_p = anova_p))
+}
+
+comparison <- bind_rows(
+  compare_models(lm_single_PM, lm_compet_PM, "Peromyscus maniculatus"),
+  compare_models(lm_single_DM, lm_compet_DM, "Dipodomys merriami"),
+  compare_models(lm_single_MO, lm_compet_MO, "Microtus oregoni")
+)
+
+# ---------- 6. Zero‑growth isoclines (only if parameters are valid) ----------
+# Only for Peromyscus vs Dipodomys (example)
+K_PM <- params_PM$K
+K_DM <- params_DM$K
+alpha_PM_DM <- params_PM$alpha_comp1   # effect of Dipodomys on Peromyscus
+alpha_DM_PM <- params_DM$alpha_comp1   # effect of Peromyscus on Dipodomys
+
+# Check if parameters are finite and positive
+if(all(is.finite(c(K_PM, K_DM, alpha_PM_DM, alpha_DM_PM))) && 
+   K_PM > 0 && K_DM > 0 && alpha_PM_DM > -10 && alpha_DM_PM > -10) {
+  
+  # Create isocline functions (only positive part)
+  isocline_PM <- function(N_DM) pmax(K_PM - alpha_PM_DM * N_DM, 0)
+  isocline_DM <- function(N_PM) pmax(K_DM - alpha_DM_PM * N_PM, 0)
+  
+  # Get ranges
+  x_max <- max(comp_data$`Dipodomys merriami`, na.rm = TRUE) * 1.2
+  y_max <- max(comp_data$`Peromyscus maniculatus`, na.rm = TRUE) * 1.2
+  
+  N_seq <- seq(0, x_max, length.out = 100)
+  iso1 <- isocline_PM(N_seq)
+  
+  N_seq2 <- seq(0, y_max, length.out = 100)
+  iso2 <- isocline_DM(N_seq2)
+  
+  # Plot
+  p_isocline <- ggplot() +
+    geom_path(data = comp_data, 
+              aes(x = `Dipodomys merriami`, y = `Peromyscus maniculatus`), 
+              alpha = 0.5, arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
+    geom_point(data = comp_data, 
+               aes(x = `Dipodomys merriami`, y = `Peromyscus maniculatus`, color = time)) +
+    geom_line(data = data.frame(N_DM = N_seq, N_PM = iso1), 
+              aes(x = N_DM, y = N_PM), color = "blue", linetype = "dashed", size = 1) +
+    geom_line(data = data.frame(N_PM = N_seq2, N_DM = iso2), 
+              aes(x = N_DM, y = N_PM), color = "red", linetype = "dashed", size = 1) +
+    coord_cartesian(xlim = c(0, x_max), ylim = c(0, y_max)) +
+    labs(x = "Dipodomys merriami abundance", y = "Peromyscus maniculatus abundance",
+         title = "Zero‑growth isoclines: Peromyscus vs Dipodomys",
+         subtitle = "Blue: Peromyscus isocline, Red: Dipodomys isocline") +
+    theme_minimal()
+  
+  print(p_isocline)
+} else {
+  cat("\nCannot plot isoclines because K or alpha values are invalid.\n")
+  cat("Check competition_results table for NA or unrealistic values.\n")
+}
+
+# ---------- 7. Print summary results ----------
+cat("\n========== INTERSPECIFIC COMPETITION RESULTS ==========\n")
+cat("\nParameters (r = intrinsic growth rate, K = carrying capacity, α = competition coefficient)\n")
+print(round(competition_results, 4))
+
+cat("\n\nInterpretation:\n")
+for(i in 1:nrow(competition_results)) {
+  sp <- competition_results$Species[i]
+  r <- competition_results$r[i]
+  K <- competition_results$K[i]
+  a1 <- competition_results$alpha_comp1[i]
+  a2 <- competition_results$alpha_comp2[i]
+  p1 <- competition_results$p_comp1[i]
+  p2 <- competition_results$p_comp2[i]
+  
+  cat(sprintf("\n%s: r = %.3f, K = %.1f\n", sp, r, K))
+  if(!is.na(p1) && p1 < 0.05) {
+    cat(sprintf("  ✓ Significant competition from first competitor (α = %.3f, p = %.4f)\n", a1, p1))
+  } else {
+    cat(sprintf("  ✗ No significant competition from first competitor (α = %.3f, p = %.4f)\n", a1, p1))
+  }
+  if(!is.na(p2) && p2 < 0.05) {
+    cat(sprintf("  ✓ Significant competition from second competitor (α = %.3f, p = %.4f)\n", a2, p2))
+  } else {
+    cat(sprintf("  ✗ No significant competition from second competitor (α = %.3f, p = %.4f)\n", a2, p2))
+  }
+}
+
+cat("\n\nModel comparison (single‑species vs. competition):\n")
+print(round(comparison, 3))
+
+cat("\n\nInterpretation of model comparison:\n")
+for(i in 1:nrow(comparison)) {
+  sp <- comparison$Species[i]
+  delta <- comparison$delta_AIC[i]
+  if(!is.na(delta) && delta < -2) {
+    cat(sprintf("  %s: Competition model is strongly favored (ΔAIC = %.1f).\n", sp, delta))
+  } else if(!is.na(delta) && delta > 2) {
+    cat(sprintf("  %s: Single‑species model is favored (ΔAIC = %.1f).\n", sp, delta))
+  } else {
+    cat(sprintf("  %s: Models are similar (ΔAIC = %.1f).\n", sp, delta))
+  }
+}
+
+cat("\n========== END OF COMPETITION ANALYSIS ==========\n")
+```
+```{r}
+# ============================================================
+# COMPETITION ANALYSIS – POOLED ACROSS SITES
+# Linearized discrete-time Lotka-Volterra with site effects
+# ============================================================
+
+library(tidyverse)
+
+# ---------- 1. Load and filter your raw data ----------
+# Assuming your original data frame is called 'data' (from the CSV)
+# Replace 'data' with your actual data frame name if different.
+
+# Define your three focal species (use names exactly as in your CSV)
+focal_species <- c("Peromyscus maniculatus", 
+                   "Dipodomys merriami", 
+                   "Microtus oregoni")  # or Microtus pennsylvanicus, etc.
+
+# Filter and create time variable (year-month)
+species_data <- data %>%
+  filter(Species %in% focal_species) %>%
+  mutate(time = paste(Year, Month, sep = "-")) %>%
+  select(Neon_site, time, Species, Abundance_estimate) %>%
+  drop_na(Abundance_estimate)
+
+# ---------- 2. Aggregate by site + time + species ----------
+# Use sum (total abundance per site-month) – change to mean if preferred
+agg_data <- species_data %>%
+  group_by(Neon_site, time, Species) %>%
+  summarise(Abundance = sum(Abundance_estimate), .groups = "drop")
+
+# ---------- 3. Pivot to wide format (one column per species) ----------
+wide_data <- agg_data %>%
+  pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+
+# Add a small constant to avoid log(0) later
+wide_data <- wide_data %>%
+  mutate(across(all_of(focal_species), ~ . + 0.1))
+
+# ---------- 4. Create lagged abundances within each site ----------
+# Sort by site and time, then compute lags
+wide_data <- wide_data %>%
+  arrange(Neon_site, time) %>%
+  group_by(Neon_site) %>%
+  mutate(across(all_of(focal_species),
+                .fns = list(lag1 = ~ lag(.)),
+                .names = "{.col}_lag1")) %>%
+  ungroup() %>%
+  drop_na()   # remove first time point per site where lags are NA
+
+# Check how many time points remain
+cat("Number of site‑time observations after lagging:", nrow(wide_data), "\n")
+if(nrow(wide_data) < 10) warning("Few observations – results may be unreliable.")
+
+# ---------- 5. Compute log ratios (per capita growth rates) ----------
+wide_data <- wide_data %>%
+  mutate(
+    log_ratio_PM = log(`Peromyscus maniculatus` / `Peromyscus maniculatus_lag1`),
+    log_ratio_DM = log(`Dipodomys merriami` / `Dipodomys merriami_lag1`),
+    log_ratio_MO = log(`Microtus oregoni` / `Microtus oregoni_lag1`)
+  ) %>%
+  filter(if_all(starts_with("log_ratio"), is.finite))  # remove infinite values
+
+cat("Observations after removing infinite log ratios:", nrow(wide_data), "\n")
+
+# ---------- 6. Fit competition models with site as fixed effect ----------
+# This pools information across sites while accounting for site differences
+
+# Model for Peromyscus maniculatus
+lm_compet_PM <- lm(log_ratio_PM ~ 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Dipodomys merriami_lag1` + 
+                   `Microtus oregoni_lag1` +
+                   factor(Neon_site),
+                   data = wide_data)
+
+# Model for Dipodomys merriami
+lm_compet_DM <- lm(log_ratio_DM ~ 
+                   `Dipodomys merriami_lag1` + 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Microtus oregoni_lag1` +
+                   factor(Neon_site),
+                   data = wide_data)
+
+# Model for Microtus oregoni
+lm_compet_MO <- lm(log_ratio_MO ~ 
+                   `Microtus oregoni_lag1` + 
+                   `Peromyscus maniculatus_lag1` + 
+                   `Dipodomys merriami_lag1` +
+                   factor(Neon_site),
+                   data = wide_data)
+
+# ---------- 7. Extract competition coefficients (ignoring site effects) ----------
+extract_params <- function(model, sp_name, comp1, comp2) {
+  coefs <- coef(model)
+  # Coefficients: intercept, own_lag, comp1_lag, comp2_lag, then site dummies
+  b0 <- coefs[1]
+  b1 <- coefs[2]   # own lag
+  b2 <- coefs[3]   # competitor 1
+  b3 <- coefs[4]   # competitor 2
+  
+  r <- b0
+  K <- -b0 / b1
+  alpha1 <- b2 / b1
+  alpha2 <- b3 / b1
+  
+  # Get p-values for competition terms (from summary)
+  pvals <- summary(model)$coefficients[,4]
+  p1 <- ifelse(length(pvals) >= 3, pvals[3], NA)
+  p2 <- ifelse(length(pvals) >= 4, pvals[4], NA)
+  
+  data.frame(Species = sp_name, r = r, K = K, 
+             alpha_vs_comp1 = alpha1, p_vs_comp1 = p1,
+             alpha_vs_comp2 = alpha2, p_vs_comp2 = p2)
+}
+
+params_PM <- extract_params(lm_compet_PM, "Peromyscus", "Dipodomys", "Microtus")
+params_DM <- extract_params(lm_compet_DM, "Dipodomys", "Peromyscus", "Microtus")
+params_MO <- extract_params(lm_compet_MO, "Microtus", "Peromyscus", "Dipodomys")
+
+competition_results <- bind_rows(params_PM, params_DM, params_MO)
+
+# ---------- 8. Single-species models for comparison ----------
+lm_single_PM <- lm(log_ratio_PM ~ `Peromyscus maniculatus_lag1` + factor(Neon_site), data = wide_data)
+lm_single_DM <- lm(log_ratio_DM ~ `Dipodomys merriami_lag1` + factor(Neon_site), data = wide_data)
+lm_single_MO <- lm(log_ratio_MO ~ `Microtus oregoni_lag1` + factor(Neon_site), data = wide_data)
+
+compare_models <- function(single, compet, sp_name) {
+  aic <- AIC(single, compet)
+  delta <- aic$AIC[2] - aic$AIC[1]
+  anova_p <- tryCatch(anova(single, compet)$`Pr(>F)`[2], error = function(e) NA)
+  data.frame(Species = sp_name, AIC_single = aic$AIC[1], 
+             AIC_compet = aic$AIC[2], delta_AIC = delta, anova_p = anova_p)
+}
+
+comparison <- bind_rows(
+  compare_models(lm_single_PM, lm_compet_PM, "Peromyscus"),
+  compare_models(lm_single_DM, lm_compet_DM, "Dipodomys"),
+  compare_models(lm_single_MO, lm_compet_MO, "Microtus")
+)
+
+# ---------- 9. Print results ----------
+# ---------- 9. Print results (corrected) ----------
+cat("\n========== COMPETITION ANALYSIS RESULTS ==========\n")
+cat("\nParameter estimates (r, K, α)\n")
+# Round only numeric columns
+competition_results_print <- competition_results %>%
+  mutate(across(where(is.numeric), ~ round(., 4)))
+print(competition_results_print)
+
+cat("\nModel comparison (single-species vs. competition)\n")
+comparison_print <- comparison %>%
+  mutate(across(where(is.numeric), ~ round(., 3)))
+print(comparison_print)
+
+cat("\nInterpretation:\n")
+for(i in 1:nrow(competition_results)) {
+  cat(sprintf("\n%s:\n", competition_results$Species[i]))
+  cat(sprintf("  r = %.3f, K = %.1f\n", competition_results$r[i], competition_results$K[i]))
+  if(competition_results$p_vs_comp1[i] < 0.05) {
+    cat(sprintf("  ✓ Significant competition from %s (α = %.3f, p = %.4f)\n", 
+                names(competition_results)[3], competition_results$alpha_vs_comp1[i], competition_results$p_vs_comp1[i]))
+  } else {
+    cat(sprintf("  ✗ No significant competition from first competitor (α = %.3f, p = %.4f)\n", 
+                competition_results$alpha_vs_comp1[i], competition_results$p_vs_comp1[i]))
+  }
+  if(competition_results$p_vs_comp2[i] < 0.05) {
+    cat(sprintf("  ✓ Significant competition from second competitor (α = %.3f, p = %.4f)\n", 
+                competition_results$alpha_vs_comp2[i], competition_results$p_vs_comp2[i]))
+  } else {
+    cat(sprintf("  ✗ No significant competition from second competitor (α = %.3f, p = %.4f)\n", 
+                competition_results$alpha_vs_comp2[i], competition_results$p_vs_comp2[i]))
+  }
+}
+
+cat("\n========== END ==========\n")
+```
+
+
+
+
+

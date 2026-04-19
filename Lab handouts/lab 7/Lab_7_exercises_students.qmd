@@ -2,6 +2,14 @@
 
 ```{r setup, include=FALSE}
 
+# Install packages (only run once)
+install.packages("readxl")
+
+# Load packages (run every time)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
 
 
@@ -13,14 +21,19 @@
 
 ### 1) Load the data from the "butterfly_abundance_data" tab of the "ecog12731-sup-0001-appendixs1.xlsx" spreadsheet. This data is from a [study](@macdonald2021distinguishing) of butterfly abundance across the boundary waters between the US and Canada. *I recommend using the function `read_excel()` from the `readxl` package. Use its help file to help you utilize it.*
 
-```{r}
-
+```{butterfly_df <- read_excel("ecog12731-sup-0001-appendixs1.xlsx",}
+                           sheet = "butterfly_abundance_data")
 
 ```
 
 #### Inspect the dataset.
 
 ```{r}
+
+# Inspect
+glimpse(butterfly_df)
+summary(butterfly_df)
+head(butterfly_df)
 
 
 
@@ -47,10 +60,18 @@
 #### Q: What does the dataset look like? Describe the dataset. (*Hint: It may be useful to look up the original article to help understand the dataset*). What needs to be cleaned?
 
 ```{=plaintext}
+The dataset contains butterfly abundance data collected from islands in the Boundary Waters region. Each row represents an island, while columns include island characteristics such as area and isolation, as well as presence/absence or abundance data for multiple butterfly species and their associated host plants. The dataset is in a wide format with many columns representing different species.
+The dataset needs cleaning because it contains many columns that are difficult to work with in wide format, possible missing values (NA), and inconsistent column naming between butterfly species and host plant data. Additionally, species richness is not directly provided and must be calculated. The dataset also includes non-resident species, which may inflate richness values and should be adjusted using host plant availability.
 ```
 #### Clean the dataset:
 
 ```{r}
+# Clean column names
+names(butterfly_df) <- make.names(names(butterfly_df))
+
+# Remove missing values
+butterfly_df_clean <- butterfly_df %>%
+  drop_na()
 
 
 
@@ -69,13 +90,17 @@
 ### How would we expect these 3 values to inter-relate to one another?
 
 ```{=plaintext}
+According to Island Biogeography Theory, species richness is expected to increase with island area and decrease with island isolation. Larger islands support more species due to greater habitat availability, while more isolated islands have fewer species because of reduced colonization rates. Area and isolation are generally independent of one another.
 ```
 ### Now create at least 3 plots, comment on what each plot looks like it is implying, and note if it is in-line with the overlying theory.
 
 ### *Hint: adding `geom_smooth(method = "lm", se = FALSE)` to your scatterplots will help you quickly explore trends for each of these. Remember that in the real-world, this should just be a starting point to selecting a model.*
 
 ```{r}
-
+ggplot(butterfly_df_clean, aes(x = area, y = isolation_1)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Area vs Isolation")
 
 
 ```
