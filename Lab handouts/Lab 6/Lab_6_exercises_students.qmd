@@ -38,7 +38,7 @@ If your dataset has an abundance column but also has repeated rows for some spec
 library(tidyverse)
 
 # Load dataset
-df <- read.csv("https://raw.githubusercontent.com/weecology/portal-datasets/master/Portal_rodents.csv")
+df <- read.csv("https://raw.githubusercontent.com/weecology/PortalData/refs/heads/main/Rodents/Portal_rodent.csv")
 
 # View data
 head(df)
@@ -104,6 +104,7 @@ df_long <- df_small
 
 # Wide format
 df_wide <- df_long %>%
+  filter(species!="") %>% # this code wouln'dt run bc there is an unnammed species row
   pivot_wider(names_from = species, values_from = abundance, values_fill = 0)
 
 # Community matrix

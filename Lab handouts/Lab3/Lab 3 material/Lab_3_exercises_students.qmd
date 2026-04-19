@@ -60,6 +60,13 @@ The dataset contains tribble population counts across multiple days. Each row re
 ### Clean the dataset based on the cleaning we performed in the previous homework assignment
 
 ```{r}
+
+# you used different column names throughout but I don't see any renaming? so I added it here so your script would run for me
+
+tribbles <- tribbles %>%
+  rename(day = Days, population = Count)
+
+
 # Clean the data
 tribbles <- tribbles %>%
   filter(!is.na(population))
